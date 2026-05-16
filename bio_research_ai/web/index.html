@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JSOMICS Research Console</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div>
+            <p class="eyebrow">Research Console</p>
+            <h1>JSOMICS</h1>
+          </div>
+        </div>
+        <div class="status-row">
+          <span class="status-chip" id="healthStatus">Checking API</span>
+          <a class="docs-link" href="/privacy">Privacy</a>
+          <a class="docs-link" href="/docs">API Docs</a>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="query-panel" aria-labelledby="queryTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Query</p>
+              <h2 id="queryTitle">Disease Research</h2>
+            </div>
+            <button class="ghost-button" id="sampleButton" type="button">Load Sample</button>
+          </div>
+
+          <form id="researchForm">
+            <label class="field full">
+              <span>Research Question</span>
+              <textarea
+                id="query"
+                rows="4"
+                required
+                minlength="3"
+                placeholder="Key biomarkers, dysregulated pathways, and therapeutic targets in NSCLC"
+              ></textarea>
+            </label>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>Disease</span>
+                <input id="disease" type="text" placeholder="NSCLC" />
+              </label>
+              <label class="field">
+                <span>API Key</span>
+                <input id="apiKey" type="password" autocomplete="off" placeholder="X-API-Key" />
+              </label>
+              <label class="field">
+                <span>Mode</span>
+                <select id="mode">
+                  <option value="auto">Auto</option>
+                  <option value="literature">Literature</option>
+                  <option value="biomarkers">Biomarkers</option>
+                  <option value="pathways">Pathways</option>
+                  <option value="drug_targets">Drug Targets</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Evidence Level</span>
+                <select id="evidenceLevel">
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>Max Results</span>
+                <input id="maxResults" type="number" min="1" max="50" value="10" />
+              </label>
+            </div>
+
+            <label class="field full">
+              <span>Inline Evidence JSON</span>
+              <textarea id="inlineEvidence" rows="7" spellcheck="false" placeholder="[]"></textarea>
+            </label>
+
+            <div class="form-actions">
+              <button class="primary-button" id="runButton" type="submit">Run Analysis</button>
+              <button class="ghost-button" id="clearButton" type="button">Clear</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="results-panel" aria-labelledby="resultsTitle">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Results</p>
+              <h2 id="resultsTitle">Evidence Workspace</h2>
+            </div>
+            <span class="status-chip subtle" id="resultStatus">Idle</span>
+          </div>
+
+          <div class="metrics" id="metrics">
+            <article>
+              <span>Confidence</span>
+              <strong>--</strong>
+            </article>
+            <article>
+              <span>Evidence</span>
+              <strong>0</strong>
+            </article>
+            <article>
+              <span>References</span>
+              <strong>0</strong>
+            </article>
+            <article>
+              <span>Targets</span>
+              <strong>0</strong>
+            </article>
+          </div>
+
+          <nav class="tabs" aria-label="Result sections">
+            <button class="tab active" data-tab="overview" type="button">Overview</button>
+            <button class="tab" data-tab="targets" type="button">Targets</button>
+            <button class="tab" data-tab="biomarkers" type="button">Biomarkers</button>
+            <button class="tab" data-tab="pathways" type="button">Pathways</button>
+            <button class="tab" data-tab="literature" type="button">Literature</button>
+            <button class="tab" data-tab="evidence" type="button">Evidence</button>
+            <button class="tab" data-tab="json" type="button">JSON</button>
+          </nav>
+
+          <div class="tab-content" id="tabContent">
+            <div class="empty-state">
+              <strong>No report loaded</strong>
+              <span>Run a query to populate the workspace.</span>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
