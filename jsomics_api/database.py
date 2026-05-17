@@ -1,19 +1,19 @@
-"""
-JSOMICS — Supabase client
-Single shared instance using the service-role key (server-side only).
-"""
 from __future__ import annotations
-from jsomics_api.config import settings
+import os
 
 
 def get_supabase():
-    """Lazy-import so the app still starts if supabase isn't installed."""
+    url = os.getenv("SUPABASE_URL", "")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+    if not url or not key:
+        print("[JSOMICS] WARNING: Supabase not configured — running without DB")
+        return None
     try:
         from supabase import create_client
-        return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-    except ImportError:
+        return create_client(url, key)
+    except Exception as e:
+        print(f"[JSOMICS] WARNING: Supabase init failed: {e}")
         return None
 
 
-# Module-level singleton — None if supabase package not installed
 supabase = get_supabase()
