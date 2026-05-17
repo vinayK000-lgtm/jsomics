@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from bio_research_ai.ingestion.pubmed import PubMedClient
-from bio_research_ai.ingestion.kegg import KEGGClient
+from bio_research_ai.ingestion.kegg import KeggClient as KEGGClient
 
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
