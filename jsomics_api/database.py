@@ -1,19 +1,18 @@
-from __future__ import annotations
 import os
 
-
 def get_supabase():
-    url = os.getenv("SUPABASE_URL", "")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    if not url or not key:
-        print("[JSOMICS] WARNING: Supabase not configured — running without DB")
+    url = os.getenv("SUPABASE_URL", "").strip()
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    if not url or not key or not url.startswith("http"):
+        print("[JSOMICS] No valid Supabase config - running without DB")
         return None
     try:
         from supabase import create_client
-        return create_client(url, key)
+        client = create_client(url, key)
+        print(f"[JSOMICS] Supabase connected: {url}")
+        return client
     except Exception as e:
-        print(f"[JSOMICS] WARNING: Supabase init failed: {e}")
+        print(f"[JSOMICS] Supabase failed: {e} - running without DB")
         return None
-
 
 supabase = get_supabase()
