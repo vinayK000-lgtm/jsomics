@@ -23,7 +23,11 @@ def build_orchestrator(settings: Settings) -> ResearchOrchestrator:
 
     if settings.SUPABASE_DATABASE_URL:
         print(f"[engine] Using Postgres: {_redact(settings.SUPABASE_DATABASE_URL)}")
-        repository = PostgresResearchRepository(settings.SUPABASE_DATABASE_URL)
+        try:
+            repository = PostgresResearchRepository(settings.SUPABASE_DATABASE_URL)
+        except Exception as e:
+            print(f"[engine] Postgres failed: {e}, falling back to in-memory")
+            repository = ResearchRepository()
 
     elif settings.SQLITE_PATH:
         print(f"[engine] Using SQLite: {settings.SQLITE_PATH}")
