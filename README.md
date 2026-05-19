@@ -1,223 +1,219 @@
 # JSOMICS
 
-Evidence-grounded biomedical research agent platform for disease intelligence,
+JSOMICS is a FastAPI-backed multi-omics research intelligence platform for
 biomarker discovery, pathway analysis, literature mining, and drug target
 prioritization.
 
-The project is designed as a commercial research software foundation. It is not a
-clinical diagnosis or treatment decision product.
+This project is for biomedical research assistance. It is not a clinical
+diagnosis, treatment, or medical decision product.
 
-## What is included
+## Current Features
 
-- PubMed ingestion client using NCBI E-utilities.
-- KEGG pathway lookup client using KEGG REST.
-- Evidence-first domain models for biomarkers, pathways, reports, and citations.
-- In-memory vector search for local development, with a pgvector schema stub for production.
-- Biomarker, pathway, literature mining, and drug target agents with a simple orchestrator.
-- FastAPI endpoint with API-key auth, provenance, confidence labels, and research caveats.
-- SQLite-backed persistent repository for pilot deployments.
-- Docker and Compose deployment artifacts.
-- Unit tests for XML parsing, marker extraction, literature triples, target scoring, vector search, and orchestration.
+- Supabase-backed email/password authentication.
+- GitHub OAuth support through Supabase Auth.
+- Email verification and password recovery redirect flow.
+- Authenticated research API with Supabase JWT or `X-API-Key`.
+- Per-user daily rate limits by plan.
+- PubMed and KEGG ingestion endpoints for researcher/lab plans.
+- Evidence-grounded multi-agent research responses with provenance.
+- Optional Supabase query cache for repeated research requests.
+- Local development fallback with in-memory or SQLite evidence storage.
+- Backend smoke tests for health, auth config, redirect safety, and research.
 
-## Project layout
+## Project Layout
 
 ```text
-bio_research_ai/
-  agents/          Agent modules and orchestration
-  api/             FastAPI schemas and app
-  ingestion/       PubMed and KEGG clients
-  models/          Domain dataclasses and enums
-  storage/         Repository and vector search abstractions
-scripts/
-  ingest_pubmed_kegg.py
-tests/
+bio_research_ai/        Core research agents, ingestion clients, models, storage
+jsomics_api/            Production FastAPI app, auth, users, research, ingest
+frontend/               Static browser app copy
+index.html              Static browser app entry
+docs/                   Deployment and product documentation
+gpt/                    Custom GPT action package
+scripts/                Data ingestion helpers
+tests/                  Backend smoke tests
 ```
 
-## Quick start
+## Requirements
+
+- Python 3.11 or newer.
+- Supabase project for login and Postgres-backed production use.
+- Optional NCBI email/API key for PubMed ingestion.
+
+The pinned Supabase client version avoids a newer optional native dependency
+chain that can fail on this Windows/Python 3.14 setup.
+
+## Local Setup
 
 ```powershell
-cd C:\Users\vinay\Documents\Codex\2026-05-16\devoloping-an-to-do-ai-agent
+cd C:\Users\vinay\jsomics
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e ".[dev]"
-uvicorn bio_research_ai.api.main:app --reload
+python -m pip install -r requirements.txt
 ```
 
-If you already created a virtual environment in `C:\Users\vinay`, either keep using it after changing into this project directory, or create a fresh `.venv` inside the project as shown above.
+For development and tests:
 
-## Test the API
+```powershell
+python -m pip install -e ".[dev]"
+```
 
-Keep `uvicorn` running in the first PowerShell window. In a second PowerShell window, check the health endpoint:
+## Environment Variables
+
+Copy the sample file and fill in real values:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Minimum useful local values:
+
+```dotenv
+ENV=development
+APP_NAME=JSOMICS
+PUBLIC_SITE_URL=https://jsomics.com
+
+SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
+SUPABASE_ANON_KEY=your-supabase-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_JWT_SECRET=your-jwt-secret
+
+BIO_RESEARCH_API_KEYS=local-dev-key
+ALLOWED_ORIGINS=https://jsomics.com,http://localhost:3000,http://127.0.0.1:5500
+```
+
+The anon key is the public browser key from Supabase Project Settings > API.
+Keep the service role key and JWT secret out of frontend code and GitHub.
+
+## Run The Backend
+
+```powershell
+python -m uvicorn jsomics_api.main:app --reload --port 8000
+```
+
+Health checks:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
+Invoke-RestMethod http://127.0.0.1:8000/ready
+Invoke-RestMethod http://127.0.0.1:8000/v1/auth/config
 ```
 
-Open the interactive research console:
+Open API docs in development:
 
 ```text
-http://127.0.0.1:8000/
+http://127.0.0.1:8000/api/docs
 ```
 
-For local authenticated runs, use `local-dev-key` when
-`BIO_RESEARCH_API_KEYS=local-dev-key`.
-
-Then call the research endpoint:
+## Run Tests
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/v1/research `
-  -Method Post `
-  -ContentType "application/json" `
-  -Body '{
-    "query": "What are early biomarkers and pathways in Parkinson disease?",
-    "disease": "Parkinson disease",
-    "mode": "biomarkers",
-    "evidence_level": "medium",
-    "inline_evidence": [
-      {
-        "source": "pubmed",
-        "source_id": "PMID:example",
-        "title": "SNCA and Parkinson disease",
-        "text": "SNCA is elevated in Parkinson disease. LRRK2 is implicated. Mitochondrial dysfunction pathway is associated with disease progression.",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/"
-      }
-    ]
-  }'
+python -m pytest
+python -m pip check
+python -m compileall jsomics_api bio_research_ai api index.py
 ```
 
-You can also call the same endpoint from Python:
+## Auth Setup
 
-```python
-import requests
+In Supabase Auth settings:
 
-response = requests.post(
-    "http://127.0.0.1:8000/v1/research",
-    json={
-        "query": "What are early biomarkers and pathways in Parkinson's disease?",
-        "disease": "Parkinson's disease",
-        "mode": "biomarkers",
-        "evidence_level": "medium",
-        "inline_evidence": [
-            {
-                "source": "pubmed",
-                "source_id": "PMID:example",
-                "title": "Example biomarker study",
-                "text": "SNCA and LRRK2 are associated with Parkinson's disease. Mitochondrial dysfunction pathway is implicated.",
-                "url": "https://pubmed.ncbi.nlm.nih.gov/"
-            }
-        ]
-    },
-)
-print(response.json())
+- Set Site URL to `https://jsomics.com`.
+- Add redirect URLs for `https://jsomics.com`, local dev URLs, and your deployed API/frontend callback URL.
+- Enable email confirmation for signup verification.
+- Enable GitHub as an OAuth provider if you want social login.
+- Google and Microsoft login are intentionally not enabled in the current UI.
+
+The frontend reads Supabase browser configuration from:
+
+```text
+GET /v1/auth/config
 ```
 
-Supported `mode` values:
-
-- `auto`: route from query keywords.
-- `literature`: extract findings and knowledge graph triples from evidence.
-- `biomarkers`: rank candidate gene/protein markers and pathway context.
-- `pathways`: extract dysregulated pathway mentions and KEGG-style records.
-- `drug_targets`: run literature, biomarker, pathway, and drug target scoring.
-
-The API response includes `biomarkers`, `pathways`, `literature_findings`,
-`knowledge_graph_triples`, `drug_targets`, `cross_agent_insights`, and
-`unified_references`.
-
-## Ingest a small PubMed/KEGG dataset
-
-```powershell
-python scripts\ingest_pubmed_kegg.py --disease "Parkinson's disease" --retmax 20 --out data\parkinsons.jsonl
-```
-
-For NCBI production usage, set an email and optional API key:
-
-```powershell
-$env:NCBI_EMAIL = "you@example.com"
-$env:NCBI_API_KEY = "optional-key"
-```
-
-To persist evidence in SQLite:
-
-```powershell
-python scripts\ingest_pubmed_kegg.py --disease "Parkinson's disease" --retmax 20 --sqlite data\research.sqlite
-$env:BIO_RESEARCH_SQLITE_PATH = "data\research.sqlite"
-$env:BIO_RESEARCH_API_KEYS = "local-dev-key"
-uvicorn bio_research_ai.api.main:app --reload
-```
-
-Authenticated API calls use:
+## Example Research Request
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/v1/research `
   -Method Post `
   -Headers @{ "X-API-Key" = "local-dev-key" } `
   -ContentType "application/json" `
-  -Body '{"query":"EGFR drug targets","disease":"NSCLC","mode":"drug_targets"}'
+  -Body '{
+    "query": "EGFR biomarkers in lung cancer",
+    "disease": "lung cancer",
+    "mode": "biomarkers",
+    "evidence_level": "medium",
+    "max_results": 5,
+    "inline_evidence": [
+      {
+        "source": "pubmed",
+        "source_id": "PMID:example",
+        "title": "EGFR in lung cancer",
+        "text": "EGFR is elevated in lung cancer and linked to MAPK pathway activation.",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/",
+        "quality": "medium"
+      }
+    ]
+  }'
 ```
 
-## Docker
+Supported `mode` values:
+
+- `auto`
+- `literature`
+- `biomarkers`
+- `pathways`
+- `drug_targets`
+
+## Ingestion
+
+PubMed and KEGG ingestion endpoints require authenticated users on the
+`researcher` or `lab` plan.
 
 ```powershell
-$env:BIO_RESEARCH_API_KEYS = "change-me"
-docker compose up --build
+Invoke-RestMethod http://127.0.0.1:8000/v1/ingest/status `
+  -Headers @{ "X-API-Key" = "local-dev-key" }
 ```
 
-The container stores SQLite data in the `bio_research_data` Docker volume.
+For NCBI production usage, configure:
+
+```dotenv
+NCBI_EMAIL=you@example.com
+NCBI_API_KEY=optional-key
+```
+
+## Deployment Notes
+
+Railway/Fly/Render start command:
+
+```text
+python -m uvicorn jsomics_api.main:app --host 0.0.0.0 --port $PORT
+```
+
+Production environment should include:
+
+- `ENV=production`
+- `PUBLIC_SITE_URL=https://jsomics.com`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `SUPABASE_JWT_SECRET`
+- `SUPABASE_DATABASE_URL`
+- `ALLOWED_ORIGINS=https://jsomics.com,https://www.jsomics.com`
+
+## GitHub Pages
+
+GitHub Pages can host the static frontend only. It cannot run the FastAPI
+backend. Deploy the backend separately, then configure the static frontend to
+talk to the deployed API.
 
 ## Product Docs
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [API contract](docs/API_CONTRACT.md)
 - [Commercialization plan](docs/COMMERCIALIZATION.md)
-- [Google free web launch](docs/GOOGLE_FREE_WEB.md)
 - [GitHub Pages launch](docs/GITHUB_PAGES.md)
 - [Supabase + Railway deployment](docs/SUPABASE_RAILWAY.md)
 - [Custom GPT package](gpt/README.md)
-- [ChatGPT Explore setup](gpt/chatgpt_explore_setup.md)
 
-## Free GitHub Pages Web Launch
+## Safety
 
-The `github-pages/` folder contains a static JSOMICS webpage that can be published
-for free with GitHub Pages. It runs a browser-side demo and can later connect to a
-hosted JSOMICS backend through the `Remote API URL` field.
-
-GitHub Pages cannot run the FastAPI backend. Use it for the public webpage, then
-host the API separately when you need live database-backed research or ChatGPT
-Actions.
-
-## Free Google Web Launch
-
-Use Firebase Hosting for the actual static JSOMICS app:
-
-```powershell
-npm install -g firebase-tools
-firebase login
-Copy-Item .firebaserc.example .firebaserc
-# edit .firebaserc with your Firebase project ID
-firebase deploy --only hosting
-```
-
-Use Google Sites for a no-code wrapper page, then embed the Firebase URL.
-
-## Supabase + Railway
-
-Use Supabase for login and Postgres, then deploy the FastAPI backend to Railway:
-
-```text
-Supabase Auth + Supabase Postgres -> Railway FastAPI -> GitHub/Firebase static UI
-```
-
-See [Supabase + Railway deployment](docs/SUPABASE_RAILWAY.md).
-
-## Next build steps
-
-1. Replace the in-memory vector store with Postgres + pgvector.
-2. Add PubMedBERT/BioBERT NER for genes, diseases, variants, and chemicals.
-3. Add UniProt, ClinVar, OMIM, DrugBank, ChEMBL, Reactome, PDB, and STRING clients.
-4. Add organization accounts, API-key management, usage metering, and audit logs.
-5. Add expert review labels for instruction tuning and confidence calibration.
-6. Add React disease explorer views for marker heatmaps, pathway networks, and exportable reports.
-
-## Safety note
-
-This platform is for biomedical research assistance, not clinical diagnosis. Production responses should always include evidence, confidence, provenance, and review status.
+Responses must include evidence, confidence, provenance, and research-use
+limitations. Human expert review is required before operational or clinical use.
