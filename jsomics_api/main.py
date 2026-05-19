@@ -127,6 +127,18 @@ async def global_exception_handler(request: Request, exc: Exception):
         content=content,
     )
 
+# ── Frontend config (public Supabase credentials only) ───────────────────────
+@app.get("/api/config", include_in_schema=False)
+async def frontend_config():
+    return {
+        "supabase_url": settings.SUPABASE_URL,
+        "supabase_anon_key": settings.SUPABASE_ANON_KEY,
+        "app_name": settings.APP_NAME,
+        "env": settings.ENV,
+        "live_evidence_enabled": settings.LIVE_EVIDENCE_ENABLED,
+    }
+
+
 # ── Root ──────────────────────────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 async def root():

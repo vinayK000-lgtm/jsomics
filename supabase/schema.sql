@@ -76,3 +76,19 @@ create trigger on_auth_user_created
 
 create index if not exists query_log_user_date_idx
     on public.query_log(user_id, created_at desc);
+
+-- User settings (LLM provider preference, NCBI email, etc.)
+create table if not exists public.user_settings (
+    user_id      uuid primary key references public.profiles(id) on delete cascade,
+    llm_provider text not null default 'openai' check (llm_provider in ('openai', 'anthropic')),
+    ncbi_email   text,
+    search_depth text not null default 'quick' check (search_depth in ('quick', 'deep', 'systematic')),
+    default_omics text[] not null default array['literature', 'biomarkers', 'pathways', 'drug_targets'],
+    preferences  jsonb not null default '{}'::jsonb,
+    updated_at   timestamptz default now()
+);
+
+alter table public.user_settings enable row level security;
+
+create policy "Users manage own settings" on public.user_settings for all
+    using (auth.uid() = user_id) with check (auth.uid() = user_id);

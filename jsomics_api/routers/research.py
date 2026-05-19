@@ -236,7 +236,7 @@ async def execute_research(body: ResearchRequest, request: Request, user: AuthUs
             "evidence_records": len(report.evidence),
             "sources": sorted({e.source for e in report.evidence}),
             "references": report.unified_references,
-            "data_path": "temporary_live_cache" if temporary_records else None,
+            "data_path": "live_evidence" if temporary_records else None,
             "took_ms": took_ms,
             "from_cache": False,
             "agent_status": live_bundle.agent_status,

@@ -49,7 +49,7 @@ async def get_usage(
         try:
             r = (
                 supabase.table("query_log")
-                .select("created_at, modalities, query")
+                .select("created_at, modalities, query, result_count")
                 .eq("user_id", user.id)
                 .gte("created_at", since)
                 .order("created_at", desc=True)
@@ -60,3 +60,26 @@ async def get_usage(
             pass
 
     return {"user_id": user.id, "period_days": days, "total_calls": len(rows), "calls": rows}
+
+
+@router.get("/me/history")
+async def get_history(
+    limit: int = Query(default=20, ge=1, le=100),
+    user: AuthUser = Depends(get_current_user),
+):
+    """Return recent query history for the current user."""
+    rows: list[dict] = []
+    if supabase:
+        try:
+            r = (
+                supabase.table("query_log")
+                .select("id, query, modalities, result_count, created_at")
+                .eq("user_id", user.id)
+                .order("created_at", desc=True)
+                .limit(limit)
+                .execute()
+            )
+            rows = r.data or []
+        except Exception:
+            pass
+    return {"history": rows, "count": len(rows)}

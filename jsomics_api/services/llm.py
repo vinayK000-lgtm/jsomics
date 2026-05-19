@@ -94,21 +94,22 @@ async def _call_openai(prompt: str) -> dict[str, Any] | None:
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     body = {
         "model": model,
-        "input": [
+        "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ],
         "temperature": 0.2,
+        "response_format": {"type": "json_object"},
     }
     async with httpx.AsyncClient(timeout=45) as client:
         res = await client.post(
-            "https://api.openai.com/v1/responses",
+            "https://api.openai.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=body,
         )
     res.raise_for_status()
     data = res.json()
-    text = data.get("output_text") or _extract_openai_text(data)
+    text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
     return _json_or_text(text)
 
 
@@ -138,15 +139,6 @@ async def _call_anthropic(prompt: str) -> dict[str, Any] | None:
     data = res.json()
     text = "\n".join(part.get("text", "") for part in data.get("content", []) if part.get("type") == "text")
     return _json_or_text(text)
-
-
-def _extract_openai_text(data: dict[str, Any]) -> str:
-    parts: list[str] = []
-    for item in data.get("output", []):
-        for content in item.get("content", []):
-            if content.get("type") in {"output_text", "text"}:
-                parts.append(content.get("text", ""))
-    return "\n".join(parts).strip()
 
 
 def _json_or_text(text: str) -> dict[str, Any]:

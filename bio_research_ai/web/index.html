@@ -3,123 +3,350 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>JSOMICS Research Console</title>
+    <title>JSOMICS — Multi-omics Research Console</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body>
+    <!-- ── Auth Modal ──────────────────────────────────────────────── -->
+    <div id="authModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="authModalTitle">Sign in to JSOMICS</h2>
+          <button class="icon-button" id="closeAuthModal" aria-label="Close">✕</button>
+        </div>
+        <nav class="modal-tabs">
+          <button class="modal-tab active" data-auth-tab="login">Sign In</button>
+          <button class="modal-tab" data-auth-tab="signup">Create Account</button>
+        </nav>
+        <div id="authLogin" class="auth-form">
+          <label class="field full">
+            <span>Email</span>
+            <input id="loginEmail" type="email" autocomplete="email" placeholder="you@institution.edu" />
+          </label>
+          <label class="field full">
+            <span>Password</span>
+            <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Password" />
+          </label>
+          <p id="authError" class="auth-error hidden"></p>
+          <button class="primary-button full-width" id="loginButton" type="button">Sign In</button>
+        </div>
+        <div id="authSignup" class="auth-form hidden">
+          <label class="field full">
+            <span>Full Name</span>
+            <input id="signupName" type="text" autocomplete="name" placeholder="Dr. Jane Smith" />
+          </label>
+          <label class="field full">
+            <span>Email</span>
+            <input id="signupEmail" type="email" autocomplete="email" placeholder="you@institution.edu" />
+          </label>
+          <label class="field full">
+            <span>Password</span>
+            <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Min. 8 characters" />
+          </label>
+          <p id="signupError" class="auth-error hidden"></p>
+          <button class="primary-button full-width" id="signupButton" type="button">Create Account</button>
+        </div>
+        <p class="auth-note">Research use only. By signing in you agree to our <a href="/privacy">Privacy Policy</a>.</p>
+      </div>
+    </div>
+
+    <!-- ── Settings Modal ─────────────────────────────────────────── -->
+    <div id="settingsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="settingsTitle">Settings</h2>
+          <button class="icon-button" id="closeSettingsModal" aria-label="Close">✕</button>
+        </div>
+
+        <section class="settings-section">
+          <h3>Account</h3>
+          <div id="settingsUserInfo" class="settings-row">
+            <span class="settings-label">Status</span>
+            <span id="settingsUserStatus" class="pill">Not signed in</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Plan</span>
+            <span id="settingsPlan" class="pill">—</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">Daily quota</span>
+            <span id="settingsQuota" class="pill subtle">—</span>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>API Access</h3>
+          <div class="settings-row">
+            <span class="settings-label">API Key</span>
+            <div class="settings-key-row">
+              <input id="settingsApiKey" type="password" placeholder="X-API-Key (for scripts)" autocomplete="off" />
+              <button class="ghost-button small" id="toggleApiKey" type="button">Show</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="settings-section">
+          <h3>Analysis</h3>
+          <div class="settings-row">
+            <span class="settings-label">LLM Provider</span>
+            <select id="settingsLlmProvider">
+              <option value="openai">OpenAI (GPT-4o mini)</option>
+              <option value="anthropic">Anthropic (Claude 3.5 Sonnet)</option>
+            </select>
+          </div>
+          <div class="settings-row">
+            <span class="settings-label">NCBI Email</span>
+            <input id="settingsNcbiEmail" type="email" placeholder="For higher PubMed rate limits" />
+          </div>
+        </section>
+
+        <div class="modal-footer">
+          <button class="ghost-button" id="closeSettingsCancel" type="button">Cancel</button>
+          <button class="primary-button" id="saveSettings" type="button">Save Settings</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Ingest Modal ───────────────────────────────────────────── -->
+    <div id="ingestModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="ingestTitle">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h2 id="ingestTitle">Ingest Data</h2>
+          <button class="icon-button" id="closeIngestModal" aria-label="Close">✕</button>
+        </div>
+        <p class="modal-subtitle">Add evidence records from biomedical databases to the active research store. Requires Researcher or Lab plan.</p>
+
+        <nav class="modal-tabs">
+          <button class="modal-tab active" data-ingest-tab="pubmed">PubMed</button>
+          <button class="modal-tab" data-ingest-tab="kegg">KEGG</button>
+          <button class="modal-tab" data-ingest-tab="status">Store Status</button>
+        </nav>
+
+        <div id="ingestPubmed" class="ingest-form">
+          <label class="field full">
+            <span>Search Query</span>
+            <input id="pubmedQuery" type="text" placeholder='e.g. "EGFR NSCLC mutation"' />
+          </label>
+          <div class="field-grid">
+            <label class="field">
+              <span>Disease (optional)</span>
+              <input id="pubmedDisease" type="text" placeholder="NSCLC" />
+            </label>
+            <label class="field">
+              <span>Max Articles</span>
+              <input id="pubmedLimit" type="number" min="1" max="100" value="25" />
+            </label>
+          </div>
+          <p id="pubmedResult" class="ingest-result hidden"></p>
+          <div class="modal-footer">
+            <button class="primary-button" id="runPubmedIngest" type="button">Fetch PubMed</button>
+          </div>
+        </div>
+
+        <div id="ingestKegg" class="ingest-form hidden">
+          <label class="field full">
+            <span>Disease Keyword</span>
+            <input id="keggKeyword" type="text" placeholder='e.g. "lung cancer"' />
+          </label>
+          <label class="field">
+            <span>Max Pathways</span>
+            <input id="keggLimit" type="number" min="1" max="50" value="20" />
+          </label>
+          <p id="keggResult" class="ingest-result hidden"></p>
+          <div class="modal-footer">
+            <button class="primary-button" id="runKeggIngest" type="button">Fetch KEGG</button>
+          </div>
+        </div>
+
+        <div id="ingestStatus" class="ingest-form hidden">
+          <div id="storeStatusContent" class="store-status">
+            <p class="muted-text">Loading store status…</p>
+          </div>
+          <div class="modal-footer">
+            <button class="ghost-button" id="refreshStoreStatus" type="button">Refresh</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── App Shell ──────────────────────────────────────────────── -->
     <div class="app">
       <header class="topbar">
         <div class="brand">
           <div class="brand-mark" aria-hidden="true">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
           <div>
-            <p class="eyebrow">Research Console</p>
+            <p class="eyebrow">Multi-omics Research Console</p>
             <h1>JSOMICS</h1>
           </div>
         </div>
+        <div class="topbar-center">
+          <nav class="panel-nav" aria-label="Workspace panels">
+            <button class="panel-tab active" data-panel="query" type="button">Query</button>
+            <button class="panel-tab" data-panel="history" type="button">History</button>
+          </nav>
+        </div>
         <div class="status-row">
           <span class="status-chip" id="healthStatus">Checking API</span>
+          <button class="ghost-button small" id="ingestButton" type="button">Ingest Data</button>
+          <button class="ghost-button small" id="settingsButton" type="button">Settings</button>
+          <button class="ghost-button small" id="authButton" type="button">Sign In</button>
           <a class="docs-link" href="/privacy">Privacy</a>
-          <a class="docs-link" href="/docs">API Docs</a>
+          <a class="docs-link" href="/api/docs">API Docs</a>
         </div>
       </header>
 
       <main class="workspace">
-        <section class="query-panel" aria-labelledby="queryTitle">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Query</p>
-              <h2 id="queryTitle">Disease Research</h2>
+        <!-- ── Left panel ── -->
+        <div class="left-panel">
+
+          <!-- QUERY PANEL -->
+          <section id="queryPanel" class="query-panel panel-view" aria-labelledby="queryTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Research Query</p>
+                <h2 id="queryTitle">Multi-omics Analysis</h2>
+              </div>
+              <button class="ghost-button small" id="sampleButton" type="button">Load Sample</button>
             </div>
-            <button class="ghost-button" id="sampleButton" type="button">Load Sample</button>
-          </div>
 
-          <form id="researchForm">
-            <label class="field full">
-              <span>Research Question</span>
-              <textarea
-                id="query"
-                rows="4"
-                required
-                minlength="3"
-                placeholder="Key biomarkers, dysregulated pathways, and therapeutic targets in NSCLC"
-              ></textarea>
-            </label>
-
-            <div class="field-grid">
-              <label class="field">
-                <span>Disease</span>
-                <input id="disease" type="text" placeholder="NSCLC" />
+            <form id="researchForm" novalidate>
+              <label class="field full">
+                <span>Research Question</span>
+                <textarea
+                  id="query"
+                  rows="3"
+                  required
+                  minlength="3"
+                  placeholder="Key biomarkers, dysregulated pathways, and therapeutic targets in NSCLC"
+                ></textarea>
               </label>
-              <label class="field">
-                <span>API Key</span>
+
+              <div class="field-grid">
+                <label class="field">
+                  <span>Disease / Condition</span>
+                  <input id="disease" type="text" placeholder="NSCLC" />
+                </label>
+                <label class="field">
+                  <span>Mode</span>
+                  <select id="mode">
+                    <option value="auto">Auto</option>
+                    <option value="literature">Literature</option>
+                    <option value="biomarkers">Biomarkers</option>
+                    <option value="pathways">Pathways</option>
+                    <option value="drug_targets">Drug Targets</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Evidence Level</span>
+                  <select id="evidenceLevel">
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Search Depth</span>
+                  <select id="searchDepth">
+                    <option value="quick">Quick</option>
+                    <option value="deep">Deep</option>
+                    <option value="systematic">Systematic</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Max Results</span>
+                  <input id="maxResults" type="number" min="1" max="50" value="10" />
+                </label>
+              </div>
+
+              <!-- Omics layer selector -->
+              <fieldset class="omics-fieldset">
+                <legend>Omics Layers</legend>
+                <div class="omics-grid">
+                  <label class="omics-check">
+                    <input type="checkbox" value="literature" checked /> Literature
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="biomarkers" checked /> Biomarkers
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="pathways" checked /> Pathways
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="drug_targets" checked /> Drug Targets
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="genomics" /> Genomics
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="transcriptomics" /> Transcriptomics
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="proteomics" /> Proteomics
+                  </label>
+                  <label class="omics-check">
+                    <input type="checkbox" value="metabolomics" /> Metabolomics
+                  </label>
+                </div>
+              </fieldset>
+
+              <!-- Inline evidence (advanced / collapsible) -->
+              <details class="advanced-details">
+                <summary>Advanced: Inline Evidence JSON</summary>
+                <label class="field full" style="margin-top: 10px">
+                  <span>Inline Evidence (JSON array)</span>
+                  <textarea id="inlineEvidence" rows="5" spellcheck="false" placeholder="[]"></textarea>
+                </label>
+              </details>
+
+              <!-- API key fallback (shown when not logged in) -->
+              <div id="apiKeyRow" class="field">
+                <span>API Key <em>(or sign in above)</em></span>
                 <input id="apiKey" type="password" autocomplete="off" placeholder="X-API-Key" />
-              </label>
-              <label class="field">
-                <span>Mode</span>
-                <select id="mode">
-                  <option value="auto">Auto</option>
-                  <option value="literature">Literature</option>
-                  <option value="biomarkers">Biomarkers</option>
-                  <option value="pathways">Pathways</option>
-                  <option value="drug_targets">Drug Targets</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Evidence Level</span>
-                <select id="evidenceLevel">
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="low">Low</option>
-                </select>
-              </label>
-              <label class="field">
-                <span>Max Results</span>
-                <input id="maxResults" type="number" min="1" max="50" value="10" />
-              </label>
+              </div>
+
+              <div class="form-actions">
+                <button class="primary-button" id="runButton" type="submit">Run Analysis</button>
+                <button class="ghost-button" id="clearButton" type="button">Clear</button>
+              </div>
+            </form>
+          </section>
+
+          <!-- HISTORY PANEL -->
+          <section id="historyPanel" class="query-panel panel-view hidden" aria-labelledby="historyTitle">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Query</p>
+                <h2 id="historyTitle">History</h2>
+              </div>
+              <button class="ghost-button small" id="refreshHistoryButton" type="button">Refresh</button>
             </div>
-
-            <label class="field full">
-              <span>Inline Evidence JSON</span>
-              <textarea id="inlineEvidence" rows="7" spellcheck="false" placeholder="[]"></textarea>
-            </label>
-
-            <div class="form-actions">
-              <button class="primary-button" id="runButton" type="submit">Run Analysis</button>
-              <button class="ghost-button" id="clearButton" type="button">Clear</button>
+            <div id="historyList" class="history-list">
+              <p class="muted-text">Sign in to view your query history.</p>
             </div>
-          </form>
-        </section>
+          </section>
+        </div>
 
+        <!-- ── Results panel ── -->
         <section class="results-panel" aria-labelledby="resultsTitle">
           <div class="section-heading">
             <div>
               <p class="eyebrow">Results</p>
               <h2 id="resultsTitle">Evidence Workspace</h2>
             </div>
-            <span class="status-chip subtle" id="resultStatus">Idle</span>
+            <div class="results-heading-meta">
+              <span class="status-chip subtle" id="resultStatus">Idle</span>
+              <span id="llmBadge" class="pill blue hidden"></span>
+            </div>
           </div>
 
           <div class="metrics" id="metrics">
-            <article>
-              <span>Confidence</span>
-              <strong>--</strong>
-            </article>
-            <article>
-              <span>Evidence</span>
-              <strong>0</strong>
-            </article>
-            <article>
-              <span>References</span>
-              <strong>0</strong>
-            </article>
-            <article>
-              <span>Targets</span>
-              <strong>0</strong>
-            </article>
+            <article><span>Confidence</span><strong>--</strong></article>
+            <article><span>Evidence</span><strong>0</strong></article>
+            <article><span>References</span><strong>0</strong></article>
+            <article><span>Targets</span><strong>0</strong></article>
           </div>
 
           <nav class="tabs" aria-label="Result sections">
@@ -129,6 +356,7 @@
             <button class="tab" data-tab="pathways" type="button">Pathways</button>
             <button class="tab" data-tab="literature" type="button">Literature</button>
             <button class="tab" data-tab="evidence" type="button">Evidence</button>
+            <button class="tab" data-tab="provenance" type="button">Provenance</button>
             <button class="tab" data-tab="json" type="button">JSON</button>
           </nav>
 
@@ -142,6 +370,10 @@
       </main>
     </div>
 
+    <!-- Toast container -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="/static/app.js"></script>
   </body>
 </html>
