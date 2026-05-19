@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import date, timedelta
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
@@ -39,7 +39,10 @@ async def get_profile(user: AuthUser = Depends(get_current_user)):
 
 
 @router.get("/me/usage")
-async def get_usage(days: int = 7, user: AuthUser = Depends(get_current_user)):
+async def get_usage(
+    days: int = Query(default=7, ge=1, le=90),
+    user: AuthUser = Depends(get_current_user),
+):
     since = (date.today() - timedelta(days=days)).isoformat()
     rows  = []
     if supabase:

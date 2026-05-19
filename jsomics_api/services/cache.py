@@ -8,17 +8,37 @@ import hashlib
 from datetime import datetime, timezone
 
 
-def _make_key(query: str, disease: str | None, mode: str) -> str:
-    raw = f"{query.strip().lower()}|{(disease or '').lower()}|{mode}"
+def _make_key(
+    query: str,
+    disease: str | None,
+    mode: str,
+    evidence_level: str,
+    max_results: int,
+) -> str:
+    raw = "|".join(
+        [
+            query.strip().lower(),
+            (disease or "").strip().lower(),
+            mode,
+            evidence_level,
+            str(max_results),
+        ]
+    )
     return hashlib.sha256(raw.encode()).hexdigest()[:32]
 
 
-async def get_cached(query: str, disease: str | None, mode: str) -> dict | None:
+async def get_cached(
+    query: str,
+    disease: str | None,
+    mode: str,
+    evidence_level: str,
+    max_results: int,
+) -> dict | None:
     from jsomics_api.database import supabase
     if not supabase:
         return None
     try:
-        key = _make_key(query, disease, mode)
+        key = _make_key(query, disease, mode, evidence_level, max_results)
         res = (
             supabase.table("query_cache")
             .select("result, expires_at, hits")
@@ -50,12 +70,19 @@ async def get_cached(query: str, disease: str | None, mode: str) -> dict | None:
         return None
 
 
-async def set_cached(query: str, disease: str | None, mode: str, result: dict) -> None:
+async def set_cached(
+    query: str,
+    disease: str | None,
+    mode: str,
+    evidence_level: str,
+    max_results: int,
+    result: dict,
+) -> None:
     from jsomics_api.database import supabase
     if not supabase:
         return
     try:
-        key = _make_key(query, disease, mode)
+        key = _make_key(query, disease, mode, evidence_level, max_results)
         supabase.table("query_cache").upsert({
             "cache_key": key,
             "query": query,

@@ -14,6 +14,7 @@ from bio_research_ai.storage.repository import ResearchRepository
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
 from jsomics_api.middleware.rate_limit import enforce_daily_rate_limit
+from jsomics_api.services.cache import get_cached, set_cached
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ async def research(
     rate_headers = enforce_daily_rate_limit(user)
 
     orchestrator: ResearchOrchestrator = request.app.state.orchestrator
+    cache_enabled = not body.inline_evidence
 
     if body.inline_evidence:
         from bio_research_ai.models import IngestionRecord
@@ -54,6 +56,27 @@ async def research(
         vs = InMemoryVectorStore()
         vs.add_many(repo.all())
         orchestrator = ResearchOrchestrator(repository=repo, vector_store=vs)
+
+    if cache_enabled:
+        cached = await get_cached(
+            body.query,
+            body.disease,
+            str(body.mode),
+            str(body.evidence_level),
+            body.max_results,
+        )
+        if cached:
+            try:
+                cached["provenance"] = cached.get("provenance") or {}
+                cached["provenance"]["from_cache"] = True
+                cached["provenance"]["took_ms"] = int((time.time() - start) * 1000)
+                result = ResearchResponse.model_validate(cached)
+                _log_query(user.id, body, len(result.evidence))
+                for header, value in rate_headers.items():
+                    response.headers[header] = value
+                return result
+            except Exception:
+                logger.warning("Ignoring invalid cached research response", exc_info=True)
 
     try:
         report = orchestrator.research(ResearchQuery(
@@ -73,7 +96,7 @@ async def research(
     for header, value in rate_headers.items():
         response.headers[header] = value
 
-    return ResearchResponse(
+    result = ResearchResponse(
         query=report.query.query, disease=report.query.disease,
         agents_invoked=report.agents_invoked,
         executive_summary=report.executive_summary,
@@ -117,8 +140,18 @@ async def research(
                     "evidence_records": len(report.evidence),
                     "sources": sorted({e.source for e in report.evidence}),
                     "references": report.unified_references,
-                    "data_path": None, "took_ms": took_ms},
+                    "data_path": None, "took_ms": took_ms, "from_cache": False},
     )
+    if cache_enabled:
+        await set_cached(
+            body.query,
+            body.disease,
+            str(body.mode),
+            str(body.evidence_level),
+            body.max_results,
+            result.model_dump(mode="json"),
+        )
+    return result
 
 
 def _log_query(user_id, body, count):

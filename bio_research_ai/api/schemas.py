@@ -104,6 +104,7 @@ class ProvenanceResponse(BaseModel):
     references: list[str]
     data_path: str | None = None
     took_ms: int | None = None
+    from_cache: bool = False
 
 
 class ResearchResponse(BaseModel):
