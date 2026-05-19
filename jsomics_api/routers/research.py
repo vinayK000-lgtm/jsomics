@@ -10,11 +10,14 @@ from bio_research_ai.models import ResearchQuery
 from bio_research_ai.agents.orchestrator import ResearchOrchestrator
 from bio_research_ai.storage import InMemoryVectorStore
 from bio_research_ai.storage.repository import ResearchRepository
+from bio_research_ai.models import IngestionRecord
 
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
 from jsomics_api.middleware.rate_limit import enforce_daily_rate_limit
 from jsomics_api.services.cache import get_cached, set_cached
+from jsomics_api.services.live_evidence import fetch_live_evidence
+from jsomics_api.services.llm import analyse_with_llm
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -39,23 +42,10 @@ async def research(
     start = time.time()
     rate_headers = enforce_daily_rate_limit(user)
 
-    orchestrator: ResearchOrchestrator = request.app.state.orchestrator
+    base_orchestrator: ResearchOrchestrator = request.app.state.orchestrator
+    orchestrator: ResearchOrchestrator = base_orchestrator
     cache_enabled = not body.inline_evidence
-
-    if body.inline_evidence:
-        from bio_research_ai.models import IngestionRecord
-        inline_records = [
-            IngestionRecord(dataset=item.source, record_id=item.source_id,
-                           disease=body.disease, title=item.title, text=item.text,
-                           source_url=item.url,
-                           metadata={"year": item.year} if item.year else {})
-            for item in body.inline_evidence
-        ]
-        repo = ResearchRepository()
-        repo.add_many(orchestrator.repository.all() + inline_records)
-        vs = InMemoryVectorStore()
-        vs.add_many(repo.all())
-        orchestrator = ResearchOrchestrator(repository=repo, vector_store=vs)
+    temporary_records: list[IngestionRecord] = []
 
     if cache_enabled:
         cached = await get_cached(
@@ -78,6 +68,34 @@ async def research(
             except Exception:
                 logger.warning("Ignoring invalid cached research response", exc_info=True)
 
+    if body.inline_evidence:
+        temporary_records.extend([
+            IngestionRecord(dataset=item.source, record_id=item.source_id,
+                           disease=body.disease, title=item.title, text=item.text,
+                           source_url=item.url,
+                           metadata={"year": item.year} if item.year else {})
+            for item in body.inline_evidence
+        ])
+    elif settings.LIVE_EVIDENCE_ENABLED:
+        # Vercel-friendly design: fetch external evidence at query time and keep it temporary.
+        # Nothing from PubMed/PubChem/KEGG is written to Supabase unless a future "save" route does so.
+        try:
+            temporary_records.extend(await fetch_live_evidence(
+                query=body.query,
+                disease=body.disease,
+                max_results=body.max_results,
+            ))
+        except Exception:
+            logger.warning("Live evidence fetch failed; falling back to configured repository", exc_info=True)
+
+    if temporary_records:
+        repo = ResearchRepository()
+        # Include any preloaded repository data, but do not write temporary evidence back to it.
+        repo.add_many(base_orchestrator.repository.all() + temporary_records)
+        vs = InMemoryVectorStore()
+        vs.add_many(repo.all())
+        orchestrator = ResearchOrchestrator(repository=repo, vector_store=vs)
+
     try:
         report = orchestrator.research(ResearchQuery(
             query=body.query, disease=body.disease,
@@ -90,6 +108,24 @@ async def research(
         if settings.ENV != "production":
             detail = f"{detail}: {exc}"
         raise HTTPException(status_code=500, detail=detail)
+
+    llm_result = None
+    try:
+        llm_result = await analyse_with_llm(
+            query=body.query,
+            disease=body.disease,
+            records=temporary_records,
+            report=report,
+        )
+    except Exception:
+        logger.warning("LLM analysis failed; returning rule-based report", exc_info=True)
+
+    if llm_result:
+        summary = llm_result.get("executive_summary") or report.executive_summary
+        if isinstance(summary, str) and summary.strip():
+            report = report.__class__(
+                **{**report.__dict__, "answer": summary.strip(), "executive_summary": summary.strip()}
+            )
 
     took_ms = int((time.time() - start) * 1000)
     _log_query(user.id, body, len(report.evidence))
@@ -140,7 +176,8 @@ async def research(
                     "evidence_records": len(report.evidence),
                     "sources": sorted({e.source for e in report.evidence}),
                     "references": report.unified_references,
-                    "data_path": None, "took_ms": took_ms, "from_cache": False},
+                    "data_path": "temporary_live_cache" if temporary_records else None,
+                    "took_ms": took_ms, "from_cache": False},
     )
     if cache_enabled:
         await set_cached(

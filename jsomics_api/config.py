@@ -32,6 +32,19 @@ class Settings:
     NCBI_EMAIL: str | None
     NCBI_API_KEY: str | None
 
+    # ── Temporary cache / LLM ─────────────────────────────────────────────────
+    KV_REST_API_URL: str | None
+    KV_REST_API_TOKEN: str | None
+    UPSTASH_REDIS_REST_URL: str | None
+    UPSTASH_REDIS_REST_TOKEN: str | None
+    CACHE_TTL_SECONDS: int
+    LLM_PROVIDER: str
+    OPENAI_API_KEY: str | None
+    OPENAI_MODEL: str
+    ANTHROPIC_API_KEY: str | None
+    ANTHROPIC_MODEL: str
+    LIVE_EVIDENCE_ENABLED: bool
+
     # ── CORS ─────────────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: tuple[str, ...]
 
@@ -65,6 +78,19 @@ class Settings:
         # NCBI
         self.NCBI_EMAIL   = os.getenv("NCBI_EMAIL")
         self.NCBI_API_KEY = os.getenv("NCBI_API_KEY")
+
+        # Temporary cache / LLM
+        self.KV_REST_API_URL = os.getenv("KV_REST_API_URL")
+        self.KV_REST_API_TOKEN = os.getenv("KV_REST_API_TOKEN")
+        self.UPSTASH_REDIS_REST_URL = os.getenv("UPSTASH_REDIS_REST_URL")
+        self.UPSTASH_REDIS_REST_TOKEN = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        self.CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "86400"))
+        self.LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")
+        self.OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+        self.OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        self.ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+        self.ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
+        self.LIVE_EVIDENCE_ENABLED = os.getenv("LIVE_EVIDENCE_ENABLED", "true").lower() not in {"0", "false", "no"}
 
         # CORS
         default_origins = (

@@ -1,11 +1,33 @@
 """
-JSOMICS — Query cache service
-Caches research results in Supabase for 7 days.
-Same query → returns in <200ms instead of 5-30 seconds.
+JSOMICS — temporary query cache for Vercel serverless.
+
+Primary: Vercel KV / Upstash Redis over REST using one of:
+  - KV_REST_API_URL + KV_REST_API_TOKEN
+  - UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN
+
+Fallback: in-process memory cache. This is only best-effort on Vercel because
+serverless instances are short-lived, but it keeps local development working.
 """
 from __future__ import annotations
+
 import hashlib
-from datetime import datetime, timezone
+import json
+import os
+import time
+from typing import Any
+
+import httpx
+
+_MEMORY_CACHE: dict[str, tuple[float, Any]] = {}
+DEFAULT_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", "86400"))
+
+
+def _redis_url() -> str:
+    return (os.getenv("KV_REST_API_URL") or os.getenv("UPSTASH_REDIS_REST_URL") or "").rstrip("/")
+
+
+def _redis_token() -> str:
+    return os.getenv("KV_REST_API_TOKEN") or os.getenv("UPSTASH_REDIS_REST_TOKEN") or ""
 
 
 def _make_key(
@@ -22,9 +44,10 @@ def _make_key(
             mode,
             evidence_level,
             str(max_results),
+            "live-v2",
         ]
     )
-    return hashlib.sha256(raw.encode()).hexdigest()[:32]
+    return "jsomics:research:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:40]
 
 
 async def get_cached(
@@ -34,40 +57,33 @@ async def get_cached(
     evidence_level: str,
     max_results: int,
 ) -> dict | None:
-    from jsomics_api.database import supabase
-    if not supabase:
-        return None
-    try:
-        key = _make_key(query, disease, mode, evidence_level, max_results)
-        res = (
-            supabase.table("query_cache")
-            .select("result, expires_at, hits")
-            .eq("cache_key", key)
-            .single()
-            .execute()
-        )
-        if not res.data:
-            return None
-        # Check expiry
-        expires = res.data.get("expires_at", "")
-        if expires:
-            exp_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
-            if exp_dt < datetime.now(timezone.utc):
-                # Expired — delete and return None
-                supabase.table("query_cache").delete().eq("cache_key", key).execute()
-                return None
-        # Increment hit counter (fire and forget)
+    key = _make_key(query, disease, mode, evidence_level, max_results)
+
+    url = _redis_url()
+    token = _redis_token()
+    if url and token:
         try:
-            supabase.table("query_cache").update(
-                {"hits": (res.data.get("hits") or 1) + 1}
-            ).eq("cache_key", key).execute()
-        except Exception:
-            pass
-        print(f"[cache] HIT — key={key[:8]}... hits={res.data.get('hits')}")
-        return res.data["result"]
-    except Exception as e:
-        print(f"[cache] get error: {e}")
+            async with httpx.AsyncClient(timeout=8) as client:
+                res = await client.get(f"{url}/get/{key}", headers={"Authorization": f"Bearer {token}"})
+            res.raise_for_status()
+            payload = res.json()
+            value = payload.get("result")
+            if not value:
+                return None
+            if isinstance(value, str):
+                return json.loads(value)
+            return value
+        except Exception as exc:
+            print(f"[cache] Upstash get failed: {exc}")
+
+    entry = _MEMORY_CACHE.get(key)
+    if not entry:
         return None
+    expires_at, value = entry
+    if expires_at < time.time():
+        _MEMORY_CACHE.pop(key, None)
+        return None
+    return value
 
 
 async def set_cached(
@@ -77,20 +93,25 @@ async def set_cached(
     evidence_level: str,
     max_results: int,
     result: dict,
+    ttl_seconds: int | None = None,
 ) -> None:
-    from jsomics_api.database import supabase
-    if not supabase:
-        return
-    try:
-        key = _make_key(query, disease, mode, evidence_level, max_results)
-        supabase.table("query_cache").upsert({
-            "cache_key": key,
-            "query": query,
-            "disease": disease or "",
-            "mode": mode,
-            "result": result,
-            "hits": 1,
-        }).execute()
-        print(f"[cache] SET — key={key[:8]}...")
-    except Exception as e:
-        print(f"[cache] set error: {e}")
+    key = _make_key(query, disease, mode, evidence_level, max_results)
+    ttl = ttl_seconds or DEFAULT_TTL_SECONDS
+    value = json.dumps(result, default=str)
+
+    url = _redis_url()
+    token = _redis_token()
+    if url and token:
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                res = await client.post(
+                    f"{url}/set/{key}",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"value": value, "ex": ttl},
+                )
+            res.raise_for_status()
+            return
+        except Exception as exc:
+            print(f"[cache] Upstash set failed: {exc}")
+
+    _MEMORY_CACHE[key] = (time.time() + ttl, result)
