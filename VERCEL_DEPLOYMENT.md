@@ -57,7 +57,7 @@ Optional GPT:
 
 ```env
 LLM_PROVIDER=openai
-OPENAI_API_KEY=...
+OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 ```
 
