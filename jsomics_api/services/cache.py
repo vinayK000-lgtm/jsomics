@@ -115,3 +115,50 @@ async def set_cached(
             print(f"[cache] Upstash set failed: {exc}")
 
     _MEMORY_CACHE[key] = (time.time() + ttl, result)
+
+
+async def get_json_key(key: str) -> Any | None:
+    """Generic JSON cache lookup used by job status/result state."""
+    url = _redis_url()
+    token = _redis_token()
+    if url and token:
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                res = await client.get(f"{url}/get/{key}", headers={"Authorization": f"Bearer {token}"})
+            res.raise_for_status()
+            payload = res.json()
+            value = payload.get("result")
+            if not value:
+                return None
+            return json.loads(value) if isinstance(value, str) else value
+        except Exception as exc:
+            print(f"[cache] Upstash generic get failed: {exc}")
+    entry = _MEMORY_CACHE.get(key)
+    if not entry:
+        return None
+    expires_at, value = entry
+    if expires_at < time.time():
+        _MEMORY_CACHE.pop(key, None)
+        return None
+    return value
+
+
+async def set_json_key(key: str, value: Any, ttl_seconds: int | None = None) -> None:
+    """Generic JSON cache write used by job status/result state."""
+    ttl = ttl_seconds or DEFAULT_TTL_SECONDS
+    encoded = json.dumps(value, default=str)
+    url = _redis_url()
+    token = _redis_token()
+    if url and token:
+        try:
+            async with httpx.AsyncClient(timeout=8) as client:
+                res = await client.post(
+                    f"{url}/set/{key}",
+                    headers={"Authorization": f"Bearer {token}"},
+                    json={"value": encoded, "ex": ttl},
+                )
+            res.raise_for_status()
+            return
+        except Exception as exc:
+            print(f"[cache] Upstash generic set failed: {exc}")
+    _MEMORY_CACHE[key] = (time.time() + ttl, value)

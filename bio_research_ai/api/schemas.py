@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
+from typing import Any
 
 from bio_research_ai.models import EvidenceLevel, ResearchMode
 
@@ -22,6 +23,8 @@ class ResearchRequest(BaseModel):
     evidence_level: EvidenceLevel = EvidenceLevel.MEDIUM
     max_results: int = Field(default=10, ge=1, le=50)
     inline_evidence: list[EvidenceInput] = Field(default_factory=list)
+    omics: list[str] = Field(default_factory=lambda: ["literature", "biomarkers", "pathways", "drug_targets"])
+    search_depth: str = Field(default="quick", pattern="^(quick|deep|systematic)$")
 
 
 class EvidenceResponse(BaseModel):
@@ -105,6 +108,13 @@ class ProvenanceResponse(BaseModel):
     data_path: str | None = None
     took_ms: int | None = None
     from_cache: bool = False
+    agent_status: dict[str, str] = Field(default_factory=dict)
+    agent_timings_ms: dict[str, int] = Field(default_factory=dict)
+    errors: list[str] = Field(default_factory=list)
+    llm_provider: str | None = None
+    llm_enabled: bool = False
+    omics: list[str] = Field(default_factory=list)
+    job_id: str | None = None
 
 
 class ResearchResponse(BaseModel):

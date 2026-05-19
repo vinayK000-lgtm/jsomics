@@ -25,7 +25,7 @@ from fastapi.staticfiles import StaticFiles
 
 from jsomics_api.config import settings
 from jsomics_api.engine import build_orchestrator
-from jsomics_api.routers import health, auth, users, research, ingest
+from jsomics_api.routers import health, auth, users, research, ingest, jobs
 
 
 logger = logging.getLogger(__name__)
@@ -96,6 +96,7 @@ app.include_router(health.router)
 app.include_router(auth.router,     prefix="/v1/auth",     tags=["auth"])
 app.include_router(users.router,    prefix="/v1/users",    tags=["users"])
 app.include_router(research.router, prefix="/v1",          tags=["research"])
+app.include_router(jobs.router,     prefix="/v1",          tags=["jobs"])
 app.include_router(ingest.router,   prefix="/v1/ingest",   tags=["ingest"])
 
 # ── Serve built-in frontend (bio_research_ai/web/) ───────────────────────────

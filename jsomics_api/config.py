@@ -44,6 +44,8 @@ class Settings:
     ANTHROPIC_API_KEY: str | None
     ANTHROPIC_MODEL: str
     LIVE_EVIDENCE_ENABLED: bool
+    SOURCE_TIMEOUT_SECONDS: float
+    JOB_TTL_SECONDS: int
 
     # ── CORS ─────────────────────────────────────────────────────────────────
     ALLOWED_ORIGINS: tuple[str, ...]
@@ -91,6 +93,8 @@ class Settings:
         self.ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
         self.ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-latest")
         self.LIVE_EVIDENCE_ENABLED = os.getenv("LIVE_EVIDENCE_ENABLED", "true").lower() not in {"0", "false", "no"}
+        self.SOURCE_TIMEOUT_SECONDS = float(os.getenv("SOURCE_TIMEOUT_SECONDS", "10"))
+        self.JOB_TTL_SECONDS = int(os.getenv("JOB_TTL_SECONDS", "3600"))
 
         # CORS
         default_origins = (
