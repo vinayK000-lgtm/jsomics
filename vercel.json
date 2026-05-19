@@ -1,25 +1,51 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/index.py",        "use": "@vercel/python" },
-    { "src": "frontend/index.html", "use": "@vercel/static" }
-  ],
-  "routes": [
-    { "src": "/v1/(.*)",  "dest": "api/index.py" },
-    { "src": "/health",   "dest": "api/index.py" },
-    { "src": "/ready",    "dest": "api/index.py" },
-    { "src": "/api/(.*)", "dest": "api/index.py" },
-    { "src": "/(.*)",     "dest": "frontend/index.html" }
+  "rewrites": [
+    {
+      "source": "/v1/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/health",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/ready",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api/index.py"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/frontend/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=()" },
-        { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=()"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co"
+        }
       ]
     }
   ]
