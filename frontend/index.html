@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>JSOMICS — Multi-Omics Research Intelligence</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
 <style>
@@ -393,7 +394,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 </div>
 
 <script>
-const API = '';
+const API = '';  // same domain on Vercel
 let token = localStorage.getItem('jsomics_token') || '';
 let userEmail = localStorage.getItem('jsomics_email') || '';
 
