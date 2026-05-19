@@ -106,6 +106,15 @@ app.include_router(jobs.router,     prefix="/v1",          tags=["jobs"])
 app.include_router(ingest.router,   prefix="/v1/ingest",   tags=["ingest"])
 if GEO_AVAILABLE:
     app.include_router(geo_router.router, prefix="/v1/geo", tags=["geo"])
+else:
+    @app.api_route("/v1/geo/{path:path}", methods=["GET", "POST", "PUT", "DELETE"], tags=["geo"])
+    async def geo_unavailable(path: str):
+        return JSONResponse(
+            status_code=503,
+            content={
+                "detail": "GEO analysis is unavailable because scientific Python dependencies are not installed in this runtime.",
+            },
+        )
 
 # ── Serve built-in frontend (bio_research_ai/web/) ───────────────────────────
 _web_dir = Path(__file__).resolve().parents[1] / "bio_research_ai" / "web"
