@@ -1,8 +1,11 @@
 """JSOMICS — Health router"""
 from __future__ import annotations
 
+import os
 import time
 from fastapi import APIRouter, Request
+
+from jsomics_api.config import settings
 
 router   = APIRouter()
 _started = time.time()
@@ -14,6 +17,8 @@ async def health(request: Request):
     orchestrator = getattr(request.app.state, "orchestrator", None)
     return {
         "status": "ok",
+        "environment": settings.ENV,
+        "auth_enabled": bool(settings.SUPABASE_JWT_SECRET or os.getenv("BIO_RESEARCH_API_KEYS")),
         "uptime_s": round(time.time() - _started),
         "evidence_records": len(orchestrator.repository.all()) if orchestrator else 0,
     }

@@ -15,9 +15,10 @@ Deploy on Railway:
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -25,7 +26,9 @@ from fastapi.staticfiles import StaticFiles
 from jsomics_api.config import settings
 from jsomics_api.engine import build_orchestrator
 from jsomics_api.routers import health, auth, users, research, ingest
-from jsomics_api.middleware.rate_limit import RateLimitMiddleware
+
+
+logger = logging.getLogger(__name__)
 
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
@@ -63,8 +66,29 @@ app.add_middleware(
     expose_headers=["X-Request-ID", "X-RateLimit-Remaining", "X-RateLimit-Limit"],
 )
 
-# ── Rate limiting ─────────────────────────────────────────────────────────────
-app.add_middleware(RateLimitMiddleware)
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), payment=()",
+    )
+    if settings.ENV == "production":
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; "
+            "img-src 'self' data: https:; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+            "font-src 'self' https://fonts.gstatic.com data:; connect-src 'self'",
+        )
+        response.headers.setdefault(
+            "Strict-Transport-Security",
+            "max-age=31536000; includeSubDomains",
+        )
+    return response
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(health.router)
@@ -76,6 +100,7 @@ app.include_router(ingest.router,   prefix="/v1/ingest",   tags=["ingest"])
 # ── Serve built-in frontend (bio_research_ai/web/) ───────────────────────────
 _web_dir = Path(__file__).resolve().parents[1] / "bio_research_ai" / "web"
 if _web_dir.exists():
+    app.mount("/static", StaticFiles(directory=_web_dir), name="web_static")
     app.mount("/app", StaticFiles(directory=_web_dir, html=True), name="web")
 
 # ── GPT Action OpenAPI spec ───────────────────────────────────────────────────
@@ -90,10 +115,14 @@ def gpt_openapi():
 
 # ── Global exception handler ─────────────────────────────────────────────────
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled request error: %s %s", request.method, request.url.path)
+    content = {"error": "internal_server_error"}
+    if settings.ENV != "production":
+        content["detail"] = str(exc)
     return JSONResponse(
         status_code=500,
-        content={"error": "internal_server_error", "detail": str(exc)},
+        content=content,
     )
 
 # ── Root ──────────────────────────────────────────────────────────────────────

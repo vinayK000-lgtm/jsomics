@@ -11,8 +11,8 @@ def get_supabase():
         client = create_client(url, key)
         print(f"[JSOMICS] Supabase connected: {url}")
         return client
-    except Exception as e:
-        print(f"[JSOMICS] Supabase failed: {e} - running without DB")
+    except Exception:
+        print("[JSOMICS] Supabase connection failed - running without DB")
         return None
 
 supabase = get_supabase()

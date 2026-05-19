@@ -1,15 +1,23 @@
 from __future__ import annotations
+
+import logging
 import time
-from fastapi import APIRouter, Depends, HTTPException, Request
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
+
 from bio_research_ai.api.schemas import ResearchRequest, ResearchResponse
 from bio_research_ai.models import ResearchQuery
 from bio_research_ai.agents.orchestrator import ResearchOrchestrator
 from bio_research_ai.storage import InMemoryVectorStore
 from bio_research_ai.storage.repository import ResearchRepository
+
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
+from jsomics_api.middleware.rate_limit import enforce_daily_rate_limit
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
 
 def _evidence_to_response(e):
     return {"source": e.source, "source_id": e.source_id, "title": e.title,
@@ -19,12 +27,16 @@ def _triple_to_response(t):
     return {"subject": t.subject, "predicate": t.predicate, "object": t.object,
             "evidence": [_evidence_to_response(e) for e in t.evidence], "confidence": t.confidence}
 
+
 @router.post("/research", response_model=ResearchResponse)
-async def research(body: ResearchRequest, request: Request,
-                   user: AuthUser = Depends(get_current_user)):
+async def research(
+    body: ResearchRequest,
+    request: Request,
+    response: Response,
+    user: AuthUser = Depends(get_current_user),
+):
     start = time.time()
-    request.state.user_id = user.id
-    request.state.plan = user.plan
+    rate_headers = enforce_daily_rate_limit(user)
 
     orchestrator: ResearchOrchestrator = request.app.state.orchestrator
 
@@ -50,10 +62,16 @@ async def research(body: ResearchRequest, request: Request,
             max_results=body.max_results,
         ))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Research engine error: {exc}")
+        logger.exception("Research engine failed")
+        detail = "Research engine error"
+        if settings.ENV != "production":
+            detail = f"{detail}: {exc}"
+        raise HTTPException(status_code=500, detail=detail)
 
     took_ms = int((time.time() - start) * 1000)
     _log_query(user.id, body, len(report.evidence))
+    for header, value in rate_headers.items():
+        response.headers[header] = value
 
     return ResearchResponse(
         query=report.query.query, disease=report.query.disease,
@@ -102,8 +120,8 @@ async def research(body: ResearchRequest, request: Request,
                     "data_path": None, "took_ms": took_ms},
     )
 
+
 def _log_query(user_id, body, count):
-    import os
     from jsomics_api.database import supabase
     if not supabase:
         return

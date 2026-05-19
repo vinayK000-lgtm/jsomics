@@ -88,6 +88,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .btn-submit:disabled{opacity:0.5;cursor:not-allowed;}
 .auth-switch{text-align:center;margin-top:1.5rem;font-family:var(--mono);font-size:0.78rem;color:var(--muted);}
 .auth-switch a{color:var(--green);cursor:pointer;}
+.check-row{display:flex;align-items:center;gap:0.55rem;margin:0.2rem 0 1rem;font-family:var(--mono);font-size:0.76rem;color:var(--muted);}
+.check-row input{width:auto;accent-color:var(--green);}
 .auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:0.65rem 0.9rem;font-family:var(--mono);font-size:0.78rem;color:#f87171;margin-bottom:1rem;display:none;}
 .auth-success{background:rgba(0,255,135,0.08);border:1px solid var(--border2);border-radius:4px;padding:0.65rem 0.9rem;font-family:var(--mono);font-size:0.78rem;color:var(--green);margin-bottom:1rem;display:none;}
 
@@ -256,12 +258,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-success" id="login-success"></div>
       <div class="form-group">
         <label>EMAIL</label>
-        <input type="email" id="login-email" placeholder="you@university.edu"/>
+        <input type="email" id="login-email" autocomplete="email" placeholder="you@university.edu" required/>
       </div>
       <div class="form-group">
         <label>PASSWORD</label>
-        <input type="password" id="login-password" placeholder="••••••••"/>
+        <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required/>
       </div>
+      <label class="check-row"><input type="checkbox" id="remember-device"/> Keep me signed in on this device</label>
       <button class="btn-submit" id="login-btn" onclick="handleLogin()">Sign in</button>
       <div class="auth-switch">
         No account? <a onclick="showPage('page-signup')">Sign up</a> ·
@@ -281,15 +284,15 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-success" id="signup-success"></div>
       <div class="form-group">
         <label>FULL NAME</label>
-        <input type="text" id="signup-name" placeholder="Dr. Jane Smith"/>
+        <input type="text" id="signup-name" autocomplete="name" maxlength="120" placeholder="Dr. Jane Smith" required/>
       </div>
       <div class="form-group">
         <label>EMAIL</label>
-        <input type="email" id="signup-email" placeholder="you@university.edu"/>
+        <input type="email" id="signup-email" autocomplete="email" placeholder="you@university.edu" required/>
       </div>
       <div class="form-group">
         <label>PASSWORD</label>
-        <input type="password" id="signup-password" placeholder="Min. 8 characters"/>
+        <input type="password" id="signup-password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Min. 8 characters" required/>
       </div>
       <button class="btn-submit" id="signup-btn" onclick="handleSignup()">Create account</button>
       <div class="auth-switch">
@@ -307,9 +310,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="sidebar-logo">JS<span>OMICS</span></div>
       <nav class="sidebar-nav">
         <a class="active"><span class="dot"></span> Research</a>
-        <a onclick="showIngestModal()"><span class="dot"></span> Ingest data</a>
-        <a><span class="dot"></span> History</a>
-        <a><span class="dot"></span> API keys</a>
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-user" id="sidebar-user">—</div>
@@ -333,7 +333,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
         <div class="query-input-wrap">
           <input class="query-input" id="query-input" type="text"
             placeholder="e.g. BRCA1 expression in breast cancer proteomics"/>
-          <button class="btn-run" id="run-btn" onclick="runQuery()">Run →</button>
+          <button class="btn-run" id="run-btn" onclick="runQuery()">Run</button>
         </div>
         <div class="query-options">
           <select class="select-field" id="query-mode">
@@ -394,8 +394,38 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 
 <script>
 const API = '';  // same domain on Vercel
-let token = localStorage.getItem('jsomics_token') || '';
-let userEmail = localStorage.getItem('jsomics_email') || '';
+const TOKEN_KEY = 'jsomics_token';
+const EMAIL_KEY = 'jsomics_email';
+let token = readStoredValue(TOKEN_KEY);
+let userEmail = readStoredValue(EMAIL_KEY);
+
+function readStoredValue(key) {
+  try {
+    return sessionStorage.getItem(key) || localStorage.getItem(key) || '';
+  } catch(e) {
+    return '';
+  }
+}
+
+function storeSession(accessToken, email, rememberDevice = false) {
+  token = accessToken || '';
+  userEmail = email || '';
+  clearStoredSession();
+  try {
+    const target = rememberDevice ? localStorage : sessionStorage;
+    target.setItem(TOKEN_KEY, token);
+    target.setItem(EMAIL_KEY, userEmail);
+  } catch(e) {}
+}
+
+function clearStoredSession() {
+  try {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(EMAIL_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(EMAIL_KEY);
+  } catch(e) {}
+}
 
 // ── PAGE ROUTING ──────────────────────────────────────────────────────────────
 function showPage(id) {
@@ -419,7 +449,7 @@ async function handleLogin() {
   const suc = document.getElementById('login-success');
   err.style.display = 'none'; suc.style.display = 'none';
 
-  if (!email || !password) { showError('login-error', 'Please enter email and password.'); return; }
+  if (!isValidEmail(email) || !password) { showError('login-error', 'Please enter a valid email and password.'); return; }
   btn.disabled = true; btn.textContent = 'Signing in...';
 
   try {
@@ -428,12 +458,9 @@ async function handleLogin() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password})
     });
-    const data = await res.json();
+    const data = await parseJson(res);
     if (!res.ok) { showError('login-error', data.detail || 'Sign-in failed'); return; }
-    token = data.access_token;
-    userEmail = data.email;
-    localStorage.setItem('jsomics_token', token);
-    localStorage.setItem('jsomics_email', userEmail);
+    storeSession(data.access_token, data.email, document.getElementById('remember-device')?.checked);
     showPage('page-dashboard');
     loadDashboard();
   } catch(e) {
@@ -451,7 +478,7 @@ async function handleSignup() {
   document.getElementById('signup-error').style.display = 'none';
   document.getElementById('signup-success').style.display = 'none';
 
-  if (!name || !email || !password) { showError('signup-error', 'All fields required.'); return; }
+  if (!name || !isValidEmail(email) || !password) { showError('signup-error', 'Enter your name, a valid email, and a password.'); return; }
   if (password.length < 8) { showError('signup-error', 'Password must be 8+ characters.'); return; }
   btn.disabled = true; btn.textContent = 'Creating account...';
 
@@ -461,12 +488,10 @@ async function handleSignup() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({email, password, full_name: name})
     });
-    const data = await res.json();
+    const data = await parseJson(res);
     if (!res.ok) { showError('signup-error', data.detail || 'Signup failed'); return; }
     if (data.access_token) {
-      token = data.access_token; userEmail = data.email;
-      localStorage.setItem('jsomics_token', token);
-      localStorage.setItem('jsomics_email', userEmail);
+      storeSession(data.access_token, data.email, false);
       showPage('page-dashboard'); loadDashboard();
     } else {
       const s = document.getElementById('signup-success');
@@ -482,8 +507,7 @@ async function handleSignup() {
 
 function handleSignout() {
   token = ''; userEmail = '';
-  localStorage.removeItem('jsomics_token');
-  localStorage.removeItem('jsomics_email');
+  clearStoredSession();
   showPage('page-landing');
 }
 
@@ -492,13 +516,37 @@ function showError(id, msg) {
   el.textContent = msg; el.style.display = 'block';
 }
 
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+async function parseJson(response) {
+  return response.json().catch(() => ({}));
+}
+
+function showQueryError(message) {
+  document.getElementById('results-area').classList.add('visible');
+  document.getElementById('results-summary').textContent = 'Request failed';
+  document.getElementById('results-took').textContent = '';
+  document.getElementById('ai-summary-block').style.display = 'none';
+  renderTab('tab-biomarkers', [], () => '');
+  renderTab('tab-pathways', [], () => '');
+  renderTab('tab-drug_targets', [], () => '');
+  renderTab('tab-literature', [], () => '');
+  renderTab('tab-evidence', [], () => '');
+  document.getElementById('tab-biomarkers').innerHTML =
+    `<div class="no-results">${escapeHtml(message)}</div>`;
+  switchTab('biomarkers');
+}
+
 // ── DASHBOARD ─────────────────────────────────────────────────────────────────
 async function loadDashboard() {
+  if (!token) { showPage('page-login'); return; }
   document.getElementById('sidebar-user').textContent = userEmail || 'Researcher';
   try {
     const res = await fetch(`${API}/v1/users/me`, {headers: {Authorization: `Bearer ${token}`}});
     if (res.status === 401) { handleSignout(); return; }
-    const data = await res.json();
+    const data = await parseJson(res);
     document.getElementById('stat-plan').textContent = data.plan || 'free';
     document.getElementById('stat-calls').textContent = data.api_calls_today ?? '0';
     document.getElementById('stat-limit').textContent = data.daily_limit ?? '100';
@@ -506,7 +554,7 @@ async function loadDashboard() {
 
   try {
     const res = await fetch(`${API}/v1/ingest/status`, {headers: {Authorization: `Bearer ${token}`}});
-    const data = await res.json();
+    const data = await parseJson(res);
     document.getElementById('stat-records').textContent = data.total_records ?? '0';
   } catch(e) {
     document.getElementById('stat-records').textContent = '0';
@@ -535,14 +583,15 @@ async function runQuery() {
       })
     });
     if (res.status === 401) { handleSignout(); return; }
-    const data = await res.json();
+    const data = await parseJson(res);
+    if (!res.ok) { throw new Error(data.detail || `Request failed with HTTP ${res.status}`); }
     renderResults(data);
     // Refresh stats
     loadDashboard();
   } catch(e) {
-    alert('Query failed — check your connection');
+    showQueryError(e.message || 'Query failed. Check your connection.');
   } finally {
-    btn.disabled = false; btn.textContent = 'Run →';
+    btn.disabled = false; btn.textContent = 'Run';
     document.getElementById('loading').classList.remove('visible');
   }
 }
@@ -551,9 +600,10 @@ function renderResults(data) {
   const area = document.getElementById('results-area');
   area.classList.add('visible');
 
-  const took = data.provenance?.took_ms ? `${data.provenance.took_ms}ms` : '';
+  const agents = Array.isArray(data.agents_invoked) ? data.agents_invoked.join(', ') : 'analysis';
+  const took = Number.isFinite(Number(data.provenance?.took_ms)) ? `${data.provenance.took_ms}ms` : '';
   document.getElementById('results-summary').textContent =
-    `${data.agents_invoked?.join(', ') || 'analysis'} · confidence: ${data.confidence_overall}`;
+    `${agents || 'analysis'} - confidence: ${data.confidence_overall || 'unknown'}`;
   document.getElementById('results-took').textContent = took;
 
   // AI summary
@@ -566,35 +616,35 @@ function renderResults(data) {
   renderTab('tab-biomarkers', data.biomarkers, b => `
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">${b.name} <span class="badge badge-green">${b.marker_type}</span>${b.direction ? `<span class="badge badge-${b.direction==='up'?'amber':'blue'}">${b.direction}regulated</span>` : ''}</div>
-        <div class="result-score">${(b.score||0).toFixed(1)} hits · ${Math.round((b.confidence||0)*100)}% conf</div>
+        <div class="result-card-title">${escapeHtml(b.name)} ${badge(b.marker_type, 'green')}${directionBadge(b.direction)}</div>
+        <div class="result-score">${safeFixed(b.score)} hits - ${safePercent(b.confidence)}% conf</div>
       </div>
-      <div class="confidence-bar"><div class="confidence-fill" style="width:${Math.round((b.confidence||0)*100)}%"></div></div>
-      <div class="result-card-meta">${b.evidence?.length || 0} supporting studies</div>
+      <div class="confidence-bar"><div class="confidence-fill" style="width:${safePercent(b.confidence)}%"></div></div>
+      <div class="result-card-meta">${safeCount(b.evidence)} supporting studies</div>
     </div>`);
 
   // Pathways
   renderTab('tab-pathways', data.pathways, p => `
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">${p.name}</div>
-        <div class="result-score">${Math.round((p.confidence||0)*100)}% conf</div>
+        <div class="result-card-title">${escapeHtml(p.name)}</div>
+        <div class="result-score">${safePercent(p.confidence)}% conf</div>
       </div>
-      <div class="confidence-bar"><div class="confidence-fill" style="width:${Math.round((p.confidence||0)*100)}%"></div></div>
-      <div class="result-card-meta">${p.pathway_id} · source: ${p.source}</div>
+      <div class="confidence-bar"><div class="confidence-fill" style="width:${safePercent(p.confidence)}%"></div></div>
+      <div class="result-card-meta">${escapeHtml(p.pathway_id)} - source: ${escapeHtml(p.source)}</div>
     </div>`);
 
   // Drug targets
   renderTab('tab-drug_targets', data.drug_targets, t => `
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">${t.gene} <span class="badge badge-blue">${t.target_class}</span></div>
-        <div class="result-score">score: ${(t.total_score||0).toFixed(1)}</div>
+        <div class="result-card-title">${escapeHtml(t.gene)} ${badge(t.target_class, 'blue')}</div>
+        <div class="result-score">score: ${safeFixed(t.total_score)}</div>
       </div>
-      <div class="result-card-body">${t.rationale}</div>
+      <div class="result-card-body">${escapeHtml(t.rationale)}</div>
       <div class="result-card-meta" style="margin-top:0.5rem;">
-        genetic: ${(t.genetic_score||0).toFixed(1)} · biological: ${(t.biological_score||0).toFixed(1)} · druggability: ${(t.druggability_score||0).toFixed(1)}
-        ${t.existing_drugs?.length ? ` · drugs: ${t.existing_drugs.map(d=>d.name).join(', ')}` : ''}
+        genetic: ${safeFixed(t.genetic_score)} - biological: ${safeFixed(t.biological_score)} - druggability: ${safeFixed(t.druggability_score)}
+        ${drugSummary(t.existing_drugs)}
       </div>
     </div>`);
 
@@ -602,13 +652,13 @@ function renderResults(data) {
   renderTab('tab-literature', data.literature_findings, lf => `
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">${lf.finding?.slice(0,80)}...</div>
-        <div class="result-score">grade: ${lf.evidence_grade}</div>
+        <div class="result-card-title">${escapeHtml(truncateText(lf.finding))}</div>
+        <div class="result-score">grade: ${escapeHtml(lf.evidence_grade)}</div>
       </div>
       <div class="result-card-meta">
-        ${lf.genes?.slice(0,5).map(g=>`<span class="badge badge-green">${g}</span>`).join('')}
-        ${lf.drugs?.slice(0,3).map(d=>`<span class="badge badge-amber">${d}</span>`).join('')}
-        · ${lf.consensus}
+        ${badgeList(lf.genes, 'green', 5)}
+        ${badgeList(lf.drugs, 'amber', 3)}
+        - ${escapeHtml(lf.consensus)}
       </div>
     </div>`);
 
@@ -616,10 +666,10 @@ function renderResults(data) {
   renderTab('tab-evidence', data.evidence, e => `
     <div class="result-card">
       <div class="result-card-header">
-        <div class="result-card-title">${e.title?.slice(0,80)}...</div>
-        <div class="result-score">${e.quality}</div>
+        <div class="result-card-title">${escapeHtml(truncateText(e.title))}</div>
+        <div class="result-score">${escapeHtml(e.quality)}</div>
       </div>
-      <div class="result-card-meta">${e.source_id}${e.year ? ` · ${e.year}` : ''}${e.url ? ` · <a href="${e.url}" target="_blank" style="color:var(--green)">↗</a>` : ''}</div>
+      <div class="result-card-meta">${escapeHtml(e.source_id)}${e.year ? ` - ${escapeHtml(e.year)}` : ''}${sourceLink(e.url)}</div>
     </div>`);
 
   switchTab('biomarkers');
@@ -632,6 +682,73 @@ function renderTab(id, items, tpl) {
   } else {
     el.innerHTML = items.map(tpl).join('');
   }
+}
+
+function badge(text, tone) {
+  const cls = tone ? ` badge-${tone}` : '';
+  return `<span class="badge${cls}">${escapeHtml(text)}</span>`;
+}
+
+function badgeList(values, tone, limit) {
+  return (values || []).slice(0, limit).map(value => badge(value, tone)).join('');
+}
+
+function directionBadge(direction) {
+  if (direction === 'up') return badge('upregulated', 'amber');
+  if (direction === 'down') return badge('downregulated', 'blue');
+  return '';
+}
+
+function drugSummary(drugs) {
+  const names = (drugs || []).map(drug => drug?.name).filter(Boolean);
+  return names.length ? ` - drugs: ${escapeHtml(names.join(', '))}` : '';
+}
+
+function sourceLink(url) {
+  const safe = safeUrl(url);
+  return safe ? ` - <a href="${escapeAttr(safe)}" target="_blank" rel="noopener noreferrer" style="color:var(--green)">source</a>` : '';
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ''), window.location.origin);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : '';
+  } catch(e) {
+    return '';
+  }
+}
+
+function safeCount(value) {
+  return Array.isArray(value) ? value.length : 0;
+}
+
+function safeFixed(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number.toFixed(1) : '0.0';
+}
+
+function safePercent(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return 0;
+  return Math.max(0, Math.min(100, Math.round(number * 100)));
+}
+
+function truncateText(value, max = 80) {
+  const text = String(value || '');
+  return text.length > max ? `${text.slice(0, max)}...` : text;
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value).replaceAll('`', '&#096;');
 }
 
 function switchTab(name) {

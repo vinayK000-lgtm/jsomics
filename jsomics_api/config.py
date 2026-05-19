@@ -57,10 +57,15 @@ class Settings:
         self.NCBI_API_KEY = os.getenv("NCBI_API_KEY")
 
         # CORS
-        raw_origins = os.getenv(
-            "ALLOWED_ORIGINS",
-            "https://jsomics.com,https://www.jsomics.com,http://localhost:3000,http://127.0.0.1:5500",
+        default_origins = (
+            "https://jsomics.com,https://www.jsomics.com"
+            if self.ENV == "production"
+            else (
+                "https://jsomics.com,https://www.jsomics.com,"
+                "http://localhost:3000,http://127.0.0.1:5500"
+            )
         )
+        raw_origins = os.getenv("ALLOWED_ORIGINS", default_origins)
         self.ALLOWED_ORIGINS = tuple(o.strip() for o in raw_origins.split(",") if o.strip())
 
         # Rate limits

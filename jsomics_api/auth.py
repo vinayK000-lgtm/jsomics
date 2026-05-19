@@ -12,6 +12,10 @@ Usage:
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
+import os
+
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
@@ -43,16 +47,19 @@ async def get_current_user(
         token = credentials.credentials
         user = _verify_jwt(token)
         if user:
-            return user
+            return _attach_request_user(request, user)
 
     # ── 2. Try X-API-Key ────────────────────────────────────────────────────
     api_key = request.headers.get("X-API-Key") or request.headers.get("x-api-key")
     if api_key and _valid_api_key(api_key):
-        return AuthUser(
-            id=f"apikey:{api_key[:8]}",
-            email="api@jsomics.com",
-            plan="researcher",
-            auth_method="api_key",
+        return _attach_request_user(
+            request,
+            AuthUser(
+                id=f"apikey:{_fingerprint_secret(api_key)}",
+                email="api@jsomics.com",
+                plan="researcher",
+                auth_method="api_key",
+            ),
         )
 
     raise HTTPException(
@@ -72,10 +79,12 @@ def _verify_jwt(token: str) -> AuthUser | None:
                 token,
                 settings.SUPABASE_JWT_SECRET,
                 algorithms=["HS256"],
-                options={"verify_aud": False},
+                options={"verify_aud": False, "require": ["exp", "sub"]},
             )
-            user_id  = payload.get("sub", "")
-            email    = payload.get("email", "")
+            user_id  = str(payload.get("sub") or "")
+            if not user_id:
+                return None
+            email    = str(payload.get("email") or "")
             metadata = payload.get("user_metadata", {}) or {}
             plan     = _fetch_plan_from_db(user_id)
             return AuthUser(
@@ -129,10 +138,19 @@ def _fetch_plan_from_db(user_id: str) -> str:
 
 def _valid_api_key(key: str) -> bool:
     """Check key against BIO_RESEARCH_API_KEYS env var (comma-separated)."""
-    import os
     raw = os.getenv("BIO_RESEARCH_API_KEYS", "")
-    valid = {k.strip() for k in raw.split(",") if k.strip()}
-    return key in valid
+    valid = [k.strip() for k in raw.split(",") if k.strip()]
+    return any(hmac.compare_digest(key, candidate) for candidate in valid)
+
+
+def _fingerprint_secret(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+
+
+def _attach_request_user(request: Request, user: AuthUser) -> AuthUser:
+    request.state.user_id = user.id
+    request.state.plan = user.plan
+    return user
 
 
 # ── Optional user (for public endpoints) ─────────────────────────────────────

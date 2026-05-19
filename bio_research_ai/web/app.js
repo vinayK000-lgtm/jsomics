@@ -51,7 +51,7 @@ function bindEvents() {
 }
 
 function seedLocalDefaults() {
-  refs.apiKey.value = localStorage.getItem("bioResearchApiKey") || "";
+  refs.apiKey.value = sessionStorage.getItem("bioResearchApiKey") || "";
   if (["localhost", "127.0.0.1"].includes(window.location.hostname) && !refs.apiKey.value) {
     refs.apiKey.value = "local-dev-key";
   }
@@ -85,7 +85,7 @@ async function onSubmit(event) {
     const apiKey = refs.apiKey.value.trim();
     if (apiKey) {
       headers["X-API-Key"] = apiKey;
-      localStorage.setItem("bioResearchApiKey", apiKey);
+      sessionStorage.setItem("bioResearchApiKey", apiKey);
     }
 
     const response = await fetch("/v1/research", {
@@ -468,7 +468,7 @@ function renderEvidence(items) {
               (item) => `
                 <tr>
                   <td>${escapeHtml(item.source)}</td>
-                  <td>${item.url ? `<a href="${escapeAttr(item.url)}">${escapeHtml(item.source_id)}</a>` : escapeHtml(item.source_id)}</td>
+                  <td>${sourceIdLink(item)}</td>
                   <td>${escapeHtml(item.title)}</td>
                   <td>${escapeHtml(String(item.year || ""))}</td>
                   <td>${escapeHtml(item.quality)}</td>
@@ -691,6 +691,22 @@ function evidencePills(evidence) {
       ${evidence.map((item) => pill(item.source_id, "blue")).join("")}
     </div>
   `;
+}
+
+function sourceIdLink(item) {
+  const url = safeUrl(item.url);
+  return url
+    ? `<a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.source_id)}</a>`
+    : escapeHtml(item.source_id);
+}
+
+function safeUrl(value) {
+  try {
+    const url = new URL(String(value || ""), window.location.origin);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch (error) {
+    return "";
+  }
 }
 
 function pill(text, tone) {

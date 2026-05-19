@@ -103,6 +103,7 @@ class ProvenanceResponse(BaseModel):
     sources: list[str]
     references: list[str]
     data_path: str | None = None
+    took_ms: int | None = None
 
 
 class ResearchResponse(BaseModel):

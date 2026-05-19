@@ -9,7 +9,9 @@ Calls the exact same ingestion clients that bio_research_ai ships with.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from bio_research_ai.ingestion.pubmed import PubMedClient
@@ -17,8 +19,10 @@ from bio_research_ai.ingestion.kegg import KeggClient as KEGGClient
 
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
+from jsomics_api.middleware.rate_limit import enforce_daily_rate_limit
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 class PubMedIngestRequest(BaseModel):
@@ -44,10 +48,12 @@ def _require_paid(user: AuthUser):
 async def ingest_pubmed(
     body: PubMedIngestRequest,
     request: Request,
+    response: Response,
     user: AuthUser = Depends(get_current_user),
 ):
     """Fetch PubMed articles and add them to the live evidence store."""
     _require_paid(user)
+    rate_headers = enforce_daily_rate_limit(user)
 
     client = PubMedClient(
         email=settings.NCBI_EMAIL,
@@ -56,11 +62,17 @@ async def ingest_pubmed(
     try:
         records = client.ingest(query=body.query, disease=body.disease, limit=body.limit)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"PubMed fetch failed: {exc}")
+        logger.exception("PubMed ingest failed")
+        detail = "PubMed fetch failed"
+        if settings.ENV != "production":
+            detail = f"{detail}: {exc}"
+        raise HTTPException(status_code=502, detail=detail)
 
     orchestrator = request.app.state.orchestrator
     orchestrator.repository.add_many(records)
     orchestrator.vector_store.add_many(records)
+    for header, value in rate_headers.items():
+        response.headers[header] = value
 
     return {
         "ingested": len(records),
@@ -78,20 +90,28 @@ async def ingest_pubmed(
 async def ingest_kegg(
     body: KEGGIngestRequest,
     request: Request,
+    response: Response,
     user: AuthUser = Depends(get_current_user),
 ):
     """Fetch KEGG pathway entries and add them to the live evidence store."""
     _require_paid(user)
+    rate_headers = enforce_daily_rate_limit(user)
 
     client = KEGGClient()
     try:
         records = client.ingest(keyword=body.disease_keyword, limit=body.limit)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"KEGG fetch failed: {exc}")
+        logger.exception("KEGG ingest failed")
+        detail = "KEGG fetch failed"
+        if settings.ENV != "production":
+            detail = f"{detail}: {exc}"
+        raise HTTPException(status_code=502, detail=detail)
 
     orchestrator = request.app.state.orchestrator
     orchestrator.repository.add_many(records)
     orchestrator.vector_store.add_many(records)
+    for header, value in rate_headers.items():
+        response.headers[header] = value
 
     return {
         "ingested": len(records),
