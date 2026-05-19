@@ -1,3 +1,7 @@
+from __future__ import annotations
+import sys
+import os
+
 """
 JSOMICS — GEO mRNA-seq ingestion and DEG analysis
 
@@ -15,7 +19,6 @@ Flow:
   6. Return ranked DEG list with log2FC, pvalue, padj
 """
 
-from __future__ import annotations
 import gzip
 import io
 import re

@@ -26,7 +26,12 @@ from fastapi.staticfiles import StaticFiles
 from jsomics_api.config import settings
 from jsomics_api.engine import build_orchestrator
 from jsomics_api.routers import health, auth, users, research, ingest, jobs
-from jsomics_api.routers import geo as geo_router
+try:
+    from jsomics_api.routers import geo as geo_router
+    GEO_AVAILABLE = True
+except ImportError as e:
+    print(f"[JSOMICS] GEO router unavailable: {e}")
+    GEO_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -99,7 +104,8 @@ app.include_router(users.router,    prefix="/v1/users",    tags=["users"])
 app.include_router(research.router, prefix="/v1",          tags=["research"])
 app.include_router(jobs.router,     prefix="/v1",          tags=["jobs"])
 app.include_router(ingest.router,   prefix="/v1/ingest",   tags=["ingest"])
-app.include_router(geo_router.router, prefix="/v1/geo", tags=["geo"])
+if GEO_AVAILABLE:
+    app.include_router(geo_router.router, prefix="/v1/geo", tags=["geo"])
 
 # ── Serve built-in frontend (bio_research_ai/web/) ───────────────────────────
 _web_dir = Path(__file__).resolve().parents[1] / "bio_research_ai" / "web"
