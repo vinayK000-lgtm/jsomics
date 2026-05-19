@@ -6,7 +6,7 @@ import os
 JSOMICS — GEO mRNA-seq ingestion and DEG analysis
 
 Supports:
-  - Raw count matrices (RNA-seq) — runs DESeq2-style normalisation via pydeseq2
+  - Raw count matrices (RNA-seq) — uses scipy t-test fallback in serverless runtime
   - Pre-normalised matrices (TPM, FPKM, log2-normalised) — uses directly
   - Auto-detects matrix type from GEO soft file metadata
 
@@ -14,7 +14,7 @@ Flow:
   1. Fetch GSE soft file from NCBI GEO FTP
   2. Parse sample metadata and expression matrix
   3. Detect matrix type (raw counts vs normalised)
-  4. If raw: run pydeseq2 DEG analysis
+  4. If raw: run t-test fallback with BH correction
   5. If normalised: run limma-style t-test via scipy
   6. Return ranked DEG list with log2FC, pvalue, padj
 """
@@ -25,10 +25,6 @@ import re
 import urllib.request
 from dataclasses import dataclass, field
 from typing import Optional
-import numpy as np
-import pandas as pd
-from scipy import stats
-from statsmodels.stats.multitest import multipletests
 
 
 @dataclass
@@ -149,6 +145,9 @@ class GEOClient:
 
     def _parse_matrix_file(self, accession: str, text: str) -> GEODataset:
         """Parse a GEO series matrix file into a GEODataset."""
+        import numpy as np
+        import pandas as pd
+
         lines = text.splitlines()
         metadata = {}
         samples = []
@@ -243,6 +242,8 @@ class GEOClient:
         Raw counts: integers, many zeros, large values (>1000)
         Normalised: floats, log2-scale (0-20 range) or TPM/FPKM (continuous)
         """
+        import numpy as np
+
         sample = df.iloc[:, 0].dropna()
         if len(sample) == 0:
             return "unknown"
@@ -276,7 +277,7 @@ class DEGAnalyser:
         """
         Run DEG analysis.
         Chooses method based on matrix type:
-          raw_counts → pydeseq2 (DESeq2-style)
+          raw_counts → t-test fallback with BH correction
           normalised → limma-style t-test with BH correction
         """
         df = dataset.expression_matrix
@@ -326,46 +327,12 @@ class DEGAnalyser:
         ctrl_cols: list[str],
         warnings: list[str],
     ) -> tuple[list[DEGResult], str]:
-        """Run DESeq2-style analysis using pydeseq2."""
-        try:
-            from pydeseq2.dds import DeseqDataSet
-            from pydeseq2.ds import DeseqStats
-
-            subset = df[case_cols + ctrl_cols].copy()
-            # Round to integers (counts must be integers for DESeq2)
-            subset = subset.round().astype(int)
-            # Remove genes with all zeros
-            subset = subset[subset.sum(axis=1) > 0]
-            # Transpose: samples x genes (pydeseq2 expects this)
-            counts = subset.T
-            # Build metadata
-            import pandas as pd
-            metadata = pd.DataFrame(
-                {"condition": ["case"] * len(case_cols) + ["control"] * len(ctrl_cols)},
-                index=counts.index,
-            )
-            dds = DeseqDataSet(counts=counts, metadata=metadata, design_factors="condition")
-            dds.deseq2()
-            stat_res = DeseqStats(dds, contrast=["condition", "case", "control"])
-            stat_res.summary()
-            res_df = stat_res.results_df.dropna()
-
-            results = []
-            for gene_id, row in res_df.iterrows():
-                results.append(DEGResult(
-                    gene_id=str(gene_id),
-                    gene_symbol=str(gene_id),
-                    log2_fold_change=float(row.get("log2FoldChange", 0)),
-                    pvalue=float(row.get("pvalue", 1)),
-                    padj=float(row.get("padj", 1)),
-                    mean_expression=float(row.get("baseMean", 0)),
-                    significant=False,
-                ))
-            return results, "deseq2"
-
-        except ImportError:
-            warnings.append("pydeseq2 not installed — falling back to t-test for raw counts. Install pydeseq2 for proper DESeq2 analysis.")
-            return self._run_ttest(df, case_cols, ctrl_cols, "raw_counts_fallback", warnings)
+        warnings.append(
+            "DESeq2 (pydeseq2) is not available in this runtime. "
+            "Using t-test with BH correction instead. "
+            "For full DESeq2 analysis run locally with pydeseq2 installed."
+        )
+        return self._run_ttest(df, case_cols, ctrl_cols, "raw_counts_ttest_fallback", warnings)
 
     def _run_ttest(
         self,
@@ -380,6 +347,11 @@ class DEGAnalyser:
         For normalised data (log2, TPM, FPKM).
         If not log2, apply log2 transformation first.
         """
+        import numpy as np
+        import pandas as pd
+        from scipy import stats
+        from statsmodels.stats.multitest import multipletests
+
         subset = df[case_cols + ctrl_cols].copy()
         # Drop genes with too many NaN
         subset = subset.dropna(thresh=len(case_cols + ctrl_cols) // 2)

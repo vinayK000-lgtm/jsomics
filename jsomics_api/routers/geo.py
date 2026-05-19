@@ -9,10 +9,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from bio_research_ai.ingestion.geo import GEOClient, DEGAnalyser
-from bio_research_ai.agents.cross_reference import CrossReferenceEngine
-from bio_research_ai.agents.ai_interpreter import AIInterpreter
-from bio_research_ai.ingestion.pubmed import PubMedClient
 from jsomics_api.auth import AuthUser, get_current_user
 from jsomics_api.config import settings
 
@@ -40,6 +36,8 @@ async def geo_search(
     user: AuthUser = Depends(get_current_user),
 ):
     """Search GEO for RNA-seq datasets."""
+    from bio_research_ai.ingestion.geo import GEOClient
+
     client = GEOClient(email=settings.NCBI_EMAIL)
     results = client.search(body.keyword, limit=body.limit)
     if not results:
@@ -47,12 +45,14 @@ async def geo_search(
     return {"datasets": results, "total": len(results)}
 
 
-@router.post("/fetch")
+@router.get("/fetch")
 async def geo_fetch(
     accession: str,
     user: AuthUser = Depends(get_current_user),
 ):
     """Fetch GEO dataset metadata and sample list."""
+    from bio_research_ai.ingestion.geo import GEOClient
+
     client = GEOClient(email=settings.NCBI_EMAIL)
     dataset = client.fetch_dataset(accession)
     if not dataset:
@@ -82,6 +82,11 @@ async def geo_analyse(
     request: Request,
     user: AuthUser = Depends(get_current_user),
 ):
+    from bio_research_ai.ingestion.geo import GEOClient, DEGAnalyser
+    from bio_research_ai.agents.cross_reference import CrossReferenceEngine
+    from bio_research_ai.agents.ai_interpreter import AIInterpreter
+    from bio_research_ai.ingestion.pubmed import PubMedClient
+
     """
     Full multi-omics analysis:
     1. Fetch GEO dataset

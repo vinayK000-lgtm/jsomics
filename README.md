@@ -1,219 +1,63 @@
-# JSOMICS
+# JSOMICS — Multi-Omics Research Intelligence Platform
 
-JSOMICS is a FastAPI-backed multi-omics research intelligence platform for
-biomarker discovery, pathway analysis, literature mining, and drug target
-prioritization.
+**Live:** https://jsomics.com
 
-This project is for biomedical research assistance. It is not a clinical
-diagnosis, treatment, or medical decision product.
+AI-powered biomedical research platform combining GEO mRNA-seq DEG analysis,
+PubMed literature mining, and GPT-4o-mini interpretation into one unified workflow.
 
-## Current Features
+## What makes JSOMICS different
 
-- Supabase-backed email/password authentication.
-- GitHub OAuth support through Supabase Auth.
-- Email verification and password recovery redirect flow.
-- Authenticated research API with Supabase JWT or `X-API-Key`.
-- Per-user daily rate limits by plan.
-- PubMed and KEGG ingestion endpoints for researcher/lab plans.
-- Evidence-grounded multi-agent research responses with provenance.
-- Optional Supabase query cache for repeated research requests.
-- Local development fallback with in-memory or SQLite evidence storage.
-- Backend smoke tests for health, auth config, redirect safety, and research.
+Most tools are siloed — you run DESeq2 separately, search PubMed separately,
+and manually reconcile the results. JSOMICS runs both in parallel and
+cross-references them automatically, surfacing genes confirmed by both
+expression data AND published literature as HIGH CONFIDENCE targets.
 
-## Project Layout
+## Architecture## Core user workflow
 
-```text
-bio_research_ai/        Core research agents, ingestion clients, models, storage
-jsomics_api/            Production FastAPI app, auth, users, research, ingest
-frontend/               Static browser app copy
-index.html              Static browser app entry
-docs/                   Deployment and product documentation
-gpt/                    Custom GPT action package
-scripts/                Data ingestion helpers
-tests/                  Backend smoke tests
+1. Enter a GEO accession (e.g. GSE12345) or search by disease keyword
+2. Select case vs control sample groups (or auto-detect)
+3. Platform runs DEG analysis + PubMed search in parallel
+4. Cross-reference engine finds genes in both tracks → HIGH CONFIDENCE targets
+5. GPT-4o-mini interprets results and suggests follow-up analyses
+6. Export gene list, pathway enrichment, and full report
+
+## API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | /v1/auth/signup | Create account |
+| POST | /v1/auth/signin | Sign in, get JWT |
+| GET  | /v1/auth/me | Current user |
+| GET  | /v1/users/me | Profile + usage stats |
+| GET  | /v1/users/me/history | Query history |
+| POST | /v1/research | Multi-agent literature research |
+| POST | /v1/geo/search | Search GEO datasets by keyword |
+| GET  | /v1/geo/fetch | Fetch GEO dataset + sample list |
+| POST | /v1/geo/analyse | Full DEG + literature + AI analysis |
+| POST | /v1/ingest/pubmed | Fetch PubMed articles (paid plans) |
+| GET  | /v1/ingest/status | Evidence store record count |
+| GET  | /health | Liveness probe |
+| GET  | /ready | Readiness + DB check |
+
+## Plans
+
+| Plan | Queries/day |
+|------|-------------|
+| free | 100 |
+| researcher | 10,000 |
+| lab | unlimited |
+
+## Environment variables (Vercel)## Local development
+
+```bash
+pip install -e ".[storage,dev]"
+cp .env.example .env
+# fill in .env values
+uvicorn jsomics_api.main:app --reload --port 8000
 ```
 
-## Requirements
+## Tech stack
 
-- Python 3.11 or newer.
-- Supabase project for login and Postgres-backed production use.
-- Optional NCBI email/API key for PubMed ingestion.
-
-The pinned Supabase client version avoids a newer optional native dependency
-chain that can fail on this Windows/Python 3.14 setup.
-
-## Local Setup
-
-```powershell
-cd C:\Users\vinay\jsomics
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-```
-
-For development and tests:
-
-```powershell
-python -m pip install -e ".[dev]"
-```
-
-## Environment Variables
-
-Copy the sample file and fill in real values:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Minimum useful local values:
-
-```dotenv
-ENV=development
-APP_NAME=JSOMICS
-PUBLIC_SITE_URL=https://jsomics.com
-
-SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
-SUPABASE_ANON_KEY=your-supabase-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-SUPABASE_JWT_SECRET=your-jwt-secret
-
-BIO_RESEARCH_API_KEYS=local-dev-key
-ALLOWED_ORIGINS=https://jsomics.com,http://localhost:3000,http://127.0.0.1:5500
-```
-
-The anon key is the public browser key from Supabase Project Settings > API.
-Keep the service role key and JWT secret out of frontend code and GitHub.
-
-## Run The Backend
-
-```powershell
-python -m uvicorn jsomics_api.main:app --reload --port 8000
-```
-
-Health checks:
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/health
-Invoke-RestMethod http://127.0.0.1:8000/ready
-Invoke-RestMethod http://127.0.0.1:8000/v1/auth/config
-```
-
-Open API docs in development:
-
-```text
-http://127.0.0.1:8000/api/docs
-```
-
-## Run Tests
-
-```powershell
-python -m pytest
-python -m pip check
-python -m compileall jsomics_api bio_research_ai api index.py
-```
-
-## Auth Setup
-
-In Supabase Auth settings:
-
-- Set Site URL to `https://jsomics.com`.
-- Add redirect URLs for `https://jsomics.com`, local dev URLs, and your deployed API/frontend callback URL.
-- Enable email confirmation for signup verification.
-- Enable GitHub as an OAuth provider if you want social login.
-- Google and Microsoft login are intentionally not enabled in the current UI.
-
-The frontend reads Supabase browser configuration from:
-
-```text
-GET /v1/auth/config
-```
-
-## Example Research Request
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/v1/research `
-  -Method Post `
-  -Headers @{ "X-API-Key" = "local-dev-key" } `
-  -ContentType "application/json" `
-  -Body '{
-    "query": "EGFR biomarkers in lung cancer",
-    "disease": "lung cancer",
-    "mode": "biomarkers",
-    "evidence_level": "medium",
-    "max_results": 5,
-    "inline_evidence": [
-      {
-        "source": "pubmed",
-        "source_id": "PMID:example",
-        "title": "EGFR in lung cancer",
-        "text": "EGFR is elevated in lung cancer and linked to MAPK pathway activation.",
-        "url": "https://pubmed.ncbi.nlm.nih.gov/",
-        "quality": "medium"
-      }
-    ]
-  }'
-```
-
-Supported `mode` values:
-
-- `auto`
-- `literature`
-- `biomarkers`
-- `pathways`
-- `drug_targets`
-
-## Ingestion
-
-PubMed and KEGG ingestion endpoints require authenticated users on the
-`researcher` or `lab` plan.
-
-```powershell
-Invoke-RestMethod http://127.0.0.1:8000/v1/ingest/status `
-  -Headers @{ "X-API-Key" = "local-dev-key" }
-```
-
-For NCBI production usage, configure:
-
-```dotenv
-NCBI_EMAIL=you@example.com
-NCBI_API_KEY=optional-key
-```
-
-## Deployment Notes
-
-Railway/Fly/Render start command:
-
-```text
-python -m uvicorn jsomics_api.main:app --host 0.0.0.0 --port $PORT
-```
-
-Production environment should include:
-
-- `ENV=production`
-- `PUBLIC_SITE_URL=https://jsomics.com`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `SUPABASE_JWT_SECRET`
-- `SUPABASE_DATABASE_URL`
-- `ALLOWED_ORIGINS=https://jsomics.com,https://www.jsomics.com`
-
-## GitHub Pages
-
-GitHub Pages can host the static frontend only. It cannot run the FastAPI
-backend. Deploy the backend separately, then configure the static frontend to
-talk to the deployed API.
-
-## Product Docs
-
-- [Architecture](docs/ARCHITECTURE.md)
-- [API contract](docs/API_CONTRACT.md)
-- [Commercialization plan](docs/COMMERCIALIZATION.md)
-- [GitHub Pages launch](docs/GITHUB_PAGES.md)
-- [Supabase + Railway deployment](docs/SUPABASE_RAILWAY.md)
-- [Custom GPT package](gpt/README.md)
-
-## Safety
-
-Responses must include evidence, confidence, provenance, and research-use
-limitations. Human expert review is required before operational or clinical use.
+FastAPI · Supabase · Vercel · Supabase Auth · GitHub OAuth ·
+NCBI E-utilities · KEGG REST API · GEO FTP · GPT-4o-mini ·
+scipy · statsmodels · pandas · numpy
