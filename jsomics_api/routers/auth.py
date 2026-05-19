@@ -17,6 +17,7 @@ class SignUpBody(BaseModel):
     email: str = Field(min_length=3, max_length=254)
     password: SecretStr = Field(min_length=8, max_length=128)
     full_name: str | None = Field(default=None, max_length=120)
+    redirect_to: str | None = Field(default=None, max_length=500)
 
     @field_validator("email")
     @classmethod
@@ -44,15 +45,33 @@ class SignInBody(BaseModel):
         return email
 
 
+class PublicAuthConfig(BaseModel):
+    supabase_url: str
+    supabase_anon_key: str
+    redirect_base: str | None = None
+
+
+@router.get("/config", response_model=PublicAuthConfig)
+async def auth_config():
+    return {
+        "supabase_url": settings.SUPABASE_URL,
+        "supabase_anon_key": settings.SUPABASE_ANON_KEY,
+        "redirect_base": settings.PUBLIC_SITE_URL or None,
+    }
+
+
 @router.post("/signup", status_code=201)
 async def signup(body: SignUpBody):
     if not supabase:
         raise HTTPException(503, "Supabase not configured")
     try:
+        options = {"data": {"full_name": body.full_name or ""}}
+        if body.redirect_to:
+            options["email_redirect_to"] = body.redirect_to
         res = supabase.auth.sign_up({
             "email": body.email,
             "password": body.password.get_secret_value(),
-            "options": {"data": {"full_name": body.full_name or ""}},
+            "options": options,
         })
     except Exception as exc:
         detail = "Signup failed. Check your details or use a different email."

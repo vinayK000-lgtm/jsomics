@@ -21,6 +21,7 @@ class Settings:
     SUPABASE_SERVICE_ROLE_KEY: str
     SUPABASE_JWT_SECRET: str           # used to verify JWTs without network call
     SUPABASE_DATABASE_URL: str | None  # postgres://... connection string
+    PUBLIC_SITE_URL: str
 
     # ── NCBI / PubMed ─────────────────────────────────────────────────────────
     NCBI_EMAIL: str | None
@@ -51,6 +52,10 @@ class Settings:
             os.getenv("SUPABASE_DATABASE_URL")
             or os.getenv("DATABASE_URL")
         )
+        self.PUBLIC_SITE_URL = os.getenv(
+            "PUBLIC_SITE_URL",
+            "https://jsomics.com" if self.ENV == "production" else "",
+        ).rstrip("/")
 
         # NCBI
         self.NCBI_EMAIL   = os.getenv("NCBI_EMAIL")

@@ -6,6 +6,7 @@
 <title>JSOMICS — Multi-Omics Research Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg: #050709;
@@ -90,6 +91,17 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .auth-switch a{color:var(--green);cursor:pointer;}
 .check-row{display:flex;align-items:center;gap:0.55rem;margin:0.2rem 0 1rem;font-family:var(--mono);font-size:0.76rem;color:var(--muted);}
 .check-row input{width:auto;accent-color:var(--green);}
+.oauth-group{display:grid;gap:0.55rem;margin-bottom:1.25rem;}
+.oauth-btn{display:flex;align-items:center;justify-content:center;gap:0.55rem;width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:var(--mono);font-size:0.78rem;padding:0.68rem 0.8rem;transition:border-color 0.2s, color 0.2s;}
+.oauth-btn:hover{border-color:var(--green2);color:var(--green);}
+.oauth-divider{display:flex;align-items:center;gap:0.75rem;margin:0 0 1.25rem;}
+.oauth-divider::before,.oauth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.oauth-divider span{font-family:var(--mono);font-size:0.68rem;color:var(--muted);}
+.alert-info{display:block;background:rgba(96,165,250,0.08);border:1px solid rgba(96,165,250,0.25);border-radius:4px;padding:0.65rem 0.9rem;font-family:var(--mono);font-size:0.78rem;color:#93c5fd;margin-bottom:1rem;}
+.verify-banner{display:none;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.25);border-radius:6px;padding:1rem 1.25rem;margin-bottom:1.5rem;color:#fbbf24;}
+.verify-banner.visible{display:block;}
+.verify-banner p{font-family:var(--mono);font-size:0.72rem;color:var(--muted);margin-top:0.2rem;}
+.btn-resend{margin-top:0.55rem;background:transparent;border:1px solid rgba(251,191,36,0.35);border-radius:4px;color:#fbbf24;font-family:var(--mono);font-size:0.7rem;padding:0.35rem 0.65rem;}
 .auth-error{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:4px;padding:0.65rem 0.9rem;font-family:var(--mono);font-size:0.78rem;color:#f87171;margin-bottom:1rem;display:none;}
 .auth-success{background:rgba(0,255,135,0.08);border:1px solid var(--border2);border-radius:4px;padding:0.65rem 0.9rem;font-family:var(--mono);font-size:0.78rem;color:var(--green);margin-bottom:1rem;display:none;}
 
@@ -256,12 +268,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-subtitle">// sign in to your account</div>
       <div class="auth-error" id="login-error"></div>
       <div class="auth-success" id="login-success"></div>
+      <div class="oauth-group">
+        <button class="oauth-btn" onclick="oauthLogin('google')">Continue with Google</button>
+        <button class="oauth-btn" onclick="oauthLogin('github')">Continue with GitHub</button>
+        <button class="oauth-btn" onclick="oauthLogin('microsoft')">Continue with Microsoft</button>
+      </div>
+      <div class="oauth-divider"><span>or sign in with password</span></div>
       <div class="form-group">
         <label>EMAIL</label>
         <input type="email" id="login-email" autocomplete="email" placeholder="you@university.edu" required/>
       </div>
       <div class="form-group">
-        <label>PASSWORD</label>
+        <label>PASSWORD <a onclick="showPage('page-forgot')" style="float:right;color:var(--green);cursor:pointer;">Forgot?</a></label>
         <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••" required/>
       </div>
       <label class="check-row"><input type="checkbox" id="remember-device"/> Keep me signed in on this device</label>
@@ -282,6 +300,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-subtitle">// create your research account</div>
       <div class="auth-error" id="signup-error"></div>
       <div class="auth-success" id="signup-success"></div>
+      <div class="oauth-group">
+        <button class="oauth-btn" onclick="oauthLogin('google')">Sign up with Google</button>
+        <button class="oauth-btn" onclick="oauthLogin('github')">Sign up with GitHub</button>
+        <button class="oauth-btn" onclick="oauthLogin('microsoft')">Sign up with Microsoft</button>
+      </div>
+      <div class="oauth-divider"><span>or sign up with email</span></div>
       <div class="form-group">
         <label>FULL NAME</label>
         <input type="text" id="signup-name" autocomplete="name" maxlength="120" placeholder="Dr. Jane Smith" required/>
@@ -304,6 +328,61 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 </div>
 
 <!-- ══════════════ DASHBOARD PAGE ══════════════ -->
+<!-- FORGOT PASSWORD PAGE -->
+<div id="page-forgot" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">JS<span>OMICS</span></div>
+      <div class="auth-subtitle">// reset your password</div>
+      <div class="auth-error" id="forgot-error"></div>
+      <div class="auth-success" id="forgot-success"></div>
+      <p class="alert-info">Enter your account email. We will send a secure reset link that returns you to JSOMICS.</p>
+      <div class="form-group">
+        <label>EMAIL</label>
+        <input type="email" id="forgot-email" autocomplete="email" placeholder="you@university.edu"/>
+      </div>
+      <button class="btn-submit" id="forgot-btn" onclick="handleForgot()">Send reset link</button>
+      <div class="auth-switch"><a onclick="showPage('page-login')">Back to sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- RESET PASSWORD PAGE -->
+<div id="page-reset" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">JS<span>OMICS</span></div>
+      <div class="auth-subtitle">// set a new password</div>
+      <div class="auth-error" id="reset-error"></div>
+      <div class="auth-success" id="reset-success"></div>
+      <div class="form-group">
+        <label>NEW PASSWORD</label>
+        <input type="password" id="reset-password" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Min. 8 characters"/>
+      </div>
+      <div class="form-group">
+        <label>CONFIRM PASSWORD</label>
+        <input type="password" id="reset-confirm" autocomplete="new-password" minlength="8" maxlength="128" placeholder="Repeat password"/>
+      </div>
+      <button class="btn-submit" id="reset-btn" onclick="handleReset()">Update password</button>
+    </div>
+  </div>
+</div>
+
+<!-- VERIFY EMAIL PAGE -->
+<div id="page-verify" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-logo">JS<span>OMICS</span></div>
+      <div class="auth-subtitle">// verify your email</div>
+      <div class="auth-error" id="resend-error"></div>
+      <div class="auth-success" id="resend-success"></div>
+      <p class="alert-info">Check your inbox and click the activation link. Once activated, you will return to JSOMICS automatically.</p>
+      <button class="btn-submit" id="resend-btn" onclick="handleResend()">Resend activation email</button>
+      <div class="auth-switch"><a onclick="showPage('page-login')">Back to sign in</a></div>
+    </div>
+  </div>
+</div>
+
 <div id="page-dashboard" class="page">
   <div class="dashboard">
     <aside class="sidebar">
@@ -318,6 +397,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
     </aside>
 
     <main class="main">
+      <div class="verify-banner" id="verify-banner">
+        <strong>Verify your email address</strong>
+        <p>Click the activation link in your inbox to unlock the full account flow.</p>
+        <button class="btn-resend" id="dashboard-resend-btn" onclick="handleResend()">Resend activation email</button>
+      </div>
       <div class="main-title">Research Console</div>
       <div class="main-sub">// multi-agent omics intelligence</div>
 
@@ -398,6 +482,11 @@ const TOKEN_KEY = 'jsomics_token';
 const EMAIL_KEY = 'jsomics_email';
 let token = readStoredValue(TOKEN_KEY);
 let userEmail = readStoredValue(EMAIL_KEY);
+let userVerified = false;
+let supabaseClient = null;
+let authConfig = {redirect_base: ''};
+const VERIFY_EMAIL_KEY = 'jsomics_pending_verify_email';
+const authReady = initSupabaseAuth();
 
 function readStoredValue(key) {
   try {
@@ -758,6 +847,280 @@ function switchTab(name) {
   });
   document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
   document.getElementById(`tab-${name}`)?.classList.add('active');
+}
+
+async function initSupabaseAuth() {
+  try {
+    const res = await fetch(`${API}/v1/auth/config`);
+    const config = await parseJson(res);
+    authConfig = config || {};
+    if (config.supabase_url && config.supabase_anon_key && window.supabase) {
+      supabaseClient = window.supabase.createClient(config.supabase_url, config.supabase_anon_key, {
+        auth: {
+          storage: window.sessionStorage,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      });
+      supabaseClient.auth.onAuthStateChange(handleSupabaseAuthState);
+      const {data} = await supabaseClient.auth.getSession();
+      if (data?.session) handleSupabaseSession(data.session);
+    }
+  } catch(e) {}
+
+  const mode = new URLSearchParams(window.location.search).get('auth');
+  if (mode === 'reset') showPage('page-reset');
+  if (mode === 'activated' && token) showActivatedDashboard();
+  if (token && !document.getElementById('page-reset')?.classList.contains('active')) {
+    showPage('page-dashboard');
+    loadDashboard();
+  }
+}
+
+function handleSupabaseAuthState(event, session) {
+  if (event === 'PASSWORD_RECOVERY') {
+    showPage('page-reset');
+    return;
+  }
+  if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+    handleSupabaseSession(session);
+    if (new URLSearchParams(window.location.search).get('auth') === 'activated') {
+      showActivatedDashboard();
+    }
+  }
+}
+
+function handleSupabaseSession(session) {
+  token = session.access_token || token;
+  userEmail = session.user?.email || userEmail;
+  userVerified = Boolean(session.user?.email_confirmed_at || session.user?.confirmed_at);
+  storeSession(token, userEmail, false);
+}
+
+function authRedirect(mode) {
+  const base = String(authConfig.redirect_base || window.location.origin).replace(/\/$/, '');
+  return `${base}/?auth=${encodeURIComponent(mode)}`;
+}
+
+function providerName(provider) {
+  return provider === 'microsoft' ? 'azure' : provider;
+}
+
+async function requireSupabase(messageTarget = 'login-error') {
+  await authReady;
+  if (!supabaseClient) {
+    showError(messageTarget, 'Supabase browser auth is not configured. Set SUPABASE_URL and SUPABASE_ANON_KEY.');
+    return null;
+  }
+  return supabaseClient;
+}
+
+async function oauthLogin(provider) {
+  const client = await requireSupabase('login-error');
+  if (!client) return;
+  const {error} = await client.auth.signInWithOAuth({
+    provider: providerName(provider),
+    options: {
+      redirectTo: authRedirect('activated'),
+      scopes: provider === 'microsoft' ? 'email' : undefined,
+    },
+  });
+  if (error) showError('login-error', error.message);
+}
+
+async function handleLogin() {
+  clearAlerts();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const password = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  if (!isValidEmail(email) || !password) { showError('login-error', 'Please enter a valid email and password.'); return; }
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const client = await requireSupabase('login-error');
+    if (client) {
+      const {data, error} = await client.auth.signInWithPassword({email, password});
+      if (error) {
+        if (error.message.toLowerCase().includes('confirm')) {
+          sessionStorage.setItem(VERIFY_EMAIL_KEY, email);
+          showError('login-error', 'Please verify your email before signing in.');
+          showPage('page-verify');
+        } else {
+          showError('login-error', 'Invalid credentials.');
+        }
+        return;
+      }
+      handleSupabaseSession(data.session);
+    } else {
+      const res = await fetch(`${API}/v1/auth/signin`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password}),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) { showError('login-error', data.detail || 'Sign-in failed'); return; }
+      storeSession(data.access_token, data.email, document.getElementById('remember-device')?.checked);
+    }
+    showPage('page-dashboard');
+    loadDashboard();
+  } catch(e) {
+    showError('login-error', 'Network error - check connection');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in';
+  }
+}
+
+async function handleSignup() {
+  clearAlerts();
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim().toLowerCase();
+  const password = document.getElementById('signup-password').value;
+  const btn = document.getElementById('signup-btn');
+  if (!name || !isValidEmail(email) || !password) { showError('signup-error', 'Enter your name, a valid email, and a password.'); return; }
+  if (password.length < 8) { showError('signup-error', 'Password must be 8+ characters.'); return; }
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  try {
+    const client = await requireSupabase('signup-error');
+    if (client) {
+      const {data, error} = await client.auth.signUp({
+        email,
+        password,
+        options: {data: {full_name: name}, emailRedirectTo: authRedirect('activated')},
+      });
+      if (error) { showError('signup-error', error.message); return; }
+      sessionStorage.setItem(VERIFY_EMAIL_KEY, email);
+      if (data.session) {
+        handleSupabaseSession(data.session);
+        showPage('page-dashboard');
+        loadDashboard();
+      } else {
+        showPage('page-verify');
+      }
+    } else {
+      const res = await fetch(`${API}/v1/auth/signup`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({email, password, full_name: name, redirect_to: authRedirect('activated')}),
+      });
+      const data = await parseJson(res);
+      if (!res.ok) { showError('signup-error', data.detail || 'Signup failed'); return; }
+      sessionStorage.setItem(VERIFY_EMAIL_KEY, email);
+      if (data.access_token) {
+        storeSession(data.access_token, data.email, false);
+        showPage('page-dashboard');
+        loadDashboard();
+      } else {
+        showPage('page-verify');
+      }
+    }
+  } catch(e) {
+    showError('signup-error', 'Network error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create account';
+  }
+}
+
+async function handleForgot() {
+  clearAlerts();
+  const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+  const btn = document.getElementById('forgot-btn');
+  if (!isValidEmail(email)) { showError('forgot-error', 'Enter a valid email address.'); return; }
+  const client = await requireSupabase('forgot-error');
+  if (!client) return;
+  btn.disabled = true; btn.textContent = 'Sending...';
+  const {error} = await client.auth.resetPasswordForEmail(email, {redirectTo: authRedirect('reset')});
+  btn.disabled = false; btn.textContent = 'Send reset link';
+  if (error) showError('forgot-error', error.message);
+  else showSuccess('forgot-success', 'Password reset link sent. Check your inbox and spam folder.');
+}
+
+async function handleReset() {
+  clearAlerts();
+  const password = document.getElementById('reset-password').value;
+  const confirm = document.getElementById('reset-confirm').value;
+  const btn = document.getElementById('reset-btn');
+  if (password.length < 8) { showError('reset-error', 'Password must be 8+ characters.'); return; }
+  if (password !== confirm) { showError('reset-error', 'Passwords do not match.'); return; }
+  const client = await requireSupabase('reset-error');
+  if (!client) return;
+  btn.disabled = true; btn.textContent = 'Updating...';
+  const {error} = await client.auth.updateUser({password});
+  btn.disabled = false; btn.textContent = 'Update password';
+  if (error) { showError('reset-error', error.message); return; }
+  showSuccess('reset-success', 'Password updated. You can sign in now.');
+  await client.auth.signOut();
+  clearStoredSession();
+  window.history.replaceState({}, document.title, window.location.pathname);
+  setTimeout(() => showPage('page-login'), 1200);
+}
+
+async function handleResend() {
+  clearAlerts();
+  const email = userEmail || sessionStorage.getItem(VERIFY_EMAIL_KEY) || document.getElementById('signup-email')?.value.trim().toLowerCase();
+  if (!isValidEmail(email)) { showError('resend-error', 'Enter your email on the sign-up form first.'); return; }
+  const client = await requireSupabase('resend-error');
+  if (!client) return;
+  const buttons = [document.getElementById('resend-btn'), document.getElementById('dashboard-resend-btn')].filter(Boolean);
+  buttons.forEach(button => { button.disabled = true; button.textContent = 'Sending...'; });
+  const {error} = await client.auth.resend({
+    type: 'signup',
+    email,
+    options: {emailRedirectTo: authRedirect('activated')},
+  });
+  buttons.forEach(button => { button.disabled = false; button.textContent = 'Resend activation email'; });
+  if (error) showError('resend-error', error.message);
+  else showSuccess('resend-success', 'Activation email resent.');
+}
+
+async function handleSignout() {
+  if (supabaseClient) await supabaseClient.auth.signOut();
+  token = ''; userEmail = ''; userVerified = false;
+  clearStoredSession();
+  showPage('page-landing');
+}
+
+async function loadDashboard() {
+  if (!token) { showPage('page-login'); return; }
+  document.getElementById('sidebar-user').textContent = userEmail || 'Researcher';
+  document.getElementById('verify-banner')?.classList.toggle('visible', Boolean(userEmail && !userVerified));
+  try {
+    const res = await fetch(`${API}/v1/users/me`, {headers: {Authorization: `Bearer ${token}`}});
+    if (res.status === 401) { handleSignout(); return; }
+    const data = await parseJson(res);
+    document.getElementById('stat-plan').textContent = data.plan || 'free';
+    document.getElementById('stat-calls').textContent = data.api_calls_today ?? '0';
+    document.getElementById('stat-limit').textContent = data.daily_limit ?? '100';
+  } catch(e) {}
+
+  try {
+    const res = await fetch(`${API}/v1/ingest/status`, {headers: {Authorization: `Bearer ${token}`}});
+    const data = await parseJson(res);
+    document.getElementById('stat-records').textContent = data.total_records ?? '0';
+  } catch(e) {
+    document.getElementById('stat-records').textContent = '0';
+  }
+}
+
+function showActivatedDashboard() {
+  window.history.replaceState({}, document.title, window.location.pathname);
+  userVerified = true;
+  showPage('page-dashboard');
+  loadDashboard();
+  showSuccess('login-success', 'Account activated.');
+}
+
+function showSuccess(id, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function clearAlerts() {
+  document.querySelectorAll('.auth-error,.auth-success').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+  });
 }
 
 // Enter key on query input
