@@ -269,9 +269,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-error" id="login-error"></div>
       <div class="auth-success" id="login-success"></div>
       <div class="oauth-group">
-        <button class="oauth-btn" onclick="oauthLogin('google')">Continue with Google</button>
         <button class="oauth-btn" onclick="oauthLogin('github')">Continue with GitHub</button>
-        <button class="oauth-btn" onclick="oauthLogin('microsoft')">Continue with Microsoft</button>
       </div>
       <div class="oauth-divider"><span>or sign in with password</span></div>
       <div class="form-group">
@@ -301,9 +299,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
       <div class="auth-error" id="signup-error"></div>
       <div class="auth-success" id="signup-success"></div>
       <div class="oauth-group">
-        <button class="oauth-btn" onclick="oauthLogin('google')">Sign up with Google</button>
         <button class="oauth-btn" onclick="oauthLogin('github')">Sign up with GitHub</button>
-        <button class="oauth-btn" onclick="oauthLogin('microsoft')">Sign up with Microsoft</button>
       </div>
       <div class="oauth-divider"><span>or sign up with email</span></div>
       <div class="form-group">
@@ -903,10 +899,6 @@ function authRedirect(mode) {
   return `${base}/?auth=${encodeURIComponent(mode)}`;
 }
 
-function providerName(provider) {
-  return provider === 'microsoft' ? 'azure' : provider;
-}
-
 async function requireSupabase(messageTarget = 'login-error') {
   await authReady;
   if (!supabaseClient) {
@@ -920,11 +912,8 @@ async function oauthLogin(provider) {
   const client = await requireSupabase('login-error');
   if (!client) return;
   const {error} = await client.auth.signInWithOAuth({
-    provider: providerName(provider),
-    options: {
-      redirectTo: authRedirect('activated'),
-      scopes: provider === 'microsoft' ? 'email' : undefined,
-    },
+    provider,
+    options: {redirectTo: authRedirect('activated')},
   });
   if (error) showError('login-error', error.message);
 }
