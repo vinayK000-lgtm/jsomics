@@ -378,7 +378,82 @@ async function runGeoAnalysis(){
 }
 function renderGeoDataset(data){const samples=(data.samples||[]).slice(0,24).map(s=>`<div class="sample-chip"><strong>${esc(s.id)}</strong>${esc(s.title||'')}</div>`).join('');document.getElementById('geoDatasetBox').innerHTML=`<div class="card-title">${esc(data.title||data.accession)}</div><div class="card-meta">${esc(data.organism)} · ${esc(data.platform||'platform n/a')} · ${esc(data.matrix_type)}</div><p style="color:var(--muted);line-height:1.65">${esc(data.summary||'No summary returned.')}</p><div class="sample-list">${samples||'<div class="empty">No samples returned.</div>'}</div>`}
 function geneTable(rows){return `<table class="mini-table"><thead><tr><th>Gene</th><th>log2FC</th><th>padj</th><th>Evidence</th></tr></thead><tbody>${rows.map(g=>`<tr><td>${esc(g.symbol)}</td><td>${Number(g.log2fc||0).toFixed(2)}</td><td>${Number(g.padj||1).toExponential(2)}</td><td>${esc(g.confidence_tier||g.direction||'')}</td></tr>`).join('')}</tbody></table>`}
-function renderGeoResults(data){const ai=data.ai_interpretation||{},deg=data.deg||{},xref=data.cross_reference||[];const topGenes=(deg.top_genes||[]).slice(0,12).map(g=>({symbol:g.symbol,log2fc:g.log2fc,padj:g.padj,confidence_tier:g.direction}));document.getElementById('geoResults').innerHTML=`<div class="ai-box glass"><div class="label">GEO AI interpretation</div><div>${esc(ai.deg_summary||'No interpretation returned.')}</div><ul class="hypothesis-list">${(ai.top_hypotheses||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div><div class="tool-grid"><div class="tool-card glass"><div class="label">Top DEG genes</div><div class="big-num">${deg.significant_up||0} up / ${deg.significant_down||0} down</div>${geneTable(topGenes)}</div><div class="tool-card glass"><div class="label">Cross-reference</div><div class="big-num">${xref.length}</div>${geneTable(xref.slice(0,12))}</div></div><div class="result-card glass"><div class="card-title">Literature + next analyses</div><p style="color:var(--muted);line-height:1.65">${esc(ai.literature_summary||'No literature summary returned.')} ${esc(ai.cross_reference||'')}</p><div class="chips">${(ai.suggested_next||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join('')}</div></div>`}
+function renderGeoResults(data) {
+  const ai = data.ai_interpretation || {};
+  const deg = data.deg || {};
+  const xref = data.cross_reference || [];
+  const plots = data.plots || {};
+  const enrichment = data.enrichment || [];
+
+  const topGenes = (deg.top_genes || []).slice(0, 15).map(g => ({
+    symbol: g.symbol, log2fc: g.log2fc, padj: g.padj,
+    confidence_tier: g.direction
+  }));
+
+  const enrichTable = enrichment.length ? `
+    <div class="tool-card glass" style="grid-column:1/-1">
+      <div class="label">Functional Enrichment — GO / KEGG / Reactome</div>
+      <table class="mini-table">
+        <thead><tr>
+          <th>Term</th><th>Database</th>
+          <th>Adjusted P</th><th>Odds Ratio</th><th>Genes</th>
+        </tr></thead>
+        <tbody>${enrichment.slice(0,15).map(e => `<tr>
+          <td>${esc(e.term_name.slice(0,60))}</td>
+          <td><span class="badge">${esc(e.database.split('_')[0])}</span></td>
+          <td>${e.adjusted_p.toExponential(2)}</td>
+          <td>${e.odds_ratio.toFixed(2)}</td>
+          <td style="font-size:10px">${esc((e.overlap_genes||[]).slice(0,5).join(', '))}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : '';
+
+  const plotsHtml = Object.entries(plots)
+    .filter(([k,v]) => v)
+    .map(([k,v]) => `
+      <div class="tool-card glass" style="grid-column:1/-1">
+        <div class="label">${({
+          volcano:'Volcano Plot',ma_plot:'MA Plot',
+          pca:'PCA — Sample Clustering',heatmap:'Heatmap — Top DEGs'
+        })[k]||k}</div>
+        <img src="data:image/png;base64,${v}"
+             style="width:100%;border-radius:8px;margin-top:8px" />
+      </div>`).join('');
+
+  document.getElementById('geoResults').innerHTML = `
+    <div class="ai-box glass">
+      <div class="label">AI Interpretation</div>
+      <div>${esc(ai.deg_summary || 'No interpretation returned.')}</div>
+      <ul class="hypothesis-list">
+        ${(ai.top_hypotheses||[]).map(x=>`<li>${esc(x)}</li>`).join('')}
+      </ul>
+    </div>
+    <div class="tool-grid">
+      <div class="tool-card glass">
+        <div class="label">DEG Summary</div>
+        <div class="big-num">${deg.significant_up||0}↑ / ${deg.significant_down||0}↓</div>
+        <div class="status-line">Method: ${esc(deg.method||'')}</div>
+        ${(deg.warnings||[]).map(w=>`<div class="status-line" style="color:#fbbf24">⚠ ${esc(w)}</div>`).join('')}
+        ${geneTable(topGenes)}
+      </div>
+      <div class="tool-card glass">
+        <div class="label">Cross-Reference (DEG ∩ Literature)</div>
+        <div class="big-num">${xref.filter(g=>g.confidence_tier==='HIGH').length} HIGH confidence</div>
+        ${geneTable(xref.slice(0,12))}
+      </div>
+      ${enrichTable}
+      ${plotsHtml}
+    </div>
+    <div class="result-card glass">
+      <div class="card-title">Literature + Next analyses</div>
+      <p style="color:var(--muted);line-height:1.65">
+        ${esc(ai.literature_summary||'')} ${esc(ai.cross_reference||'')}
+      </p>
+      <div class="chips">
+        ${(ai.suggested_next||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join('')}
+      </div>
+    </div>`;
+}
 function startIdleTimer(){['mousemove','keydown','click','touchstart'].forEach(e=>window.addEventListener(e,resetIdleTimer));resetIdleTimer()}
 function stopIdleTimer(){clearTimeout(idleTimer);clearTimeout(warningTimer);clearInterval(countdownTimer);document.getElementById('timeoutToast').classList.remove('show')}
 function resetIdleTimer(){clearTimeout(idleTimer);clearTimeout(warningTimer);clearInterval(countdownTimer);document.getElementById('timeoutToast').classList.remove('show');warningTimer=setTimeout(showTimeoutWarning,25*60*1000);idleTimer=setTimeout(signOut,30*60*1000)}

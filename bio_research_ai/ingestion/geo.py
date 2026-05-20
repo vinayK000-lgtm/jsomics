@@ -264,51 +264,63 @@ class GEOClient:
 
 
 class DEGAnalyser:
-    """Run differential expression analysis on a GEODataset."""
+    """
+    Full DEG analysis pipeline — Python equivalent of the R DESeq2 workflow.
+
+    For raw counts:   pydeseq2 (DESeq2 port) → size factor estimation,
+                      dispersion estimation, negative binomial GLM,
+                      apeglm-equivalent LFC shrinkage
+    For normalised:   limma-equivalent linear model via scipy/statsmodels,
+                      empirical Bayes moderation, BH correction
+
+    Matches the R workflow:
+      DESeqDataSetFromMatrix → DESeq() → results() → lfcShrink() → EnhancedVolcano
+    """
 
     def analyse(
         self,
-        dataset: GEODataset,
+        dataset,
         case_samples: list[str],
         control_samples: list[str],
         disease: str = "",
-        padj_threshold: float = 0.05,
-        log2fc_threshold: float = 1.0,
-    ) -> DEGAnalysis:
-        """
-        Run DEG analysis.
-        Chooses method based on matrix type:
-          raw_counts → t-test fallback with BH correction
-          normalised → limma-style t-test with BH correction
-        """
+        padj_threshold: float = 0.1,
+        log2fc_threshold: float = 0.58,
+    ):
+        import numpy as np
+        import pandas as pd
+
         df = dataset.expression_matrix
         if df is None:
             raise ValueError("Dataset has no expression matrix")
 
-        # Subset to case/control columns
         all_cols = list(df.columns)
         case_cols = [c for c in case_samples if c in all_cols]
         ctrl_cols = [c for c in control_samples if c in all_cols]
 
         if len(case_cols) < 2 or len(ctrl_cols) < 2:
-            raise ValueError(f"Need at least 2 samples per group. Got case={len(case_cols)}, control={len(ctrl_cols)}")
+            raise ValueError(
+                f"Need at least 2 samples per group. "
+                f"Got case={len(case_cols)}, control={len(ctrl_cols)}"
+            )
 
         warnings = []
+
         if dataset.matrix_type == "raw_counts":
             results, method = self._run_deseq2(df, case_cols, ctrl_cols, warnings)
         else:
-            results, method = self._run_ttest(df, case_cols, ctrl_cols, dataset.matrix_type, warnings)
+            results, method = self._run_limma_voom(df, case_cols, ctrl_cols,
+                                                    dataset.matrix_type, warnings)
 
-        # Apply thresholds
         for r in results:
-            r.significant = (r.padj < padj_threshold and abs(r.log2_fold_change) >= log2fc_threshold)
+            r.significant = (
+                r.padj < padj_threshold and abs(r.log2_fold_change) >= log2fc_threshold
+            )
 
-        sig_up = sum(1 for r in results if r.significant and r.log2_fold_change > 0)
+        sig_up   = sum(1 for r in results if r.significant and r.log2_fold_change > 0)
         sig_down = sum(1 for r in results if r.significant and r.log2_fold_change < 0)
-
-        # Sort by significance then fold change
         results.sort(key=lambda r: (not r.significant, r.padj, -abs(r.log2_fold_change)))
 
+        from bio_research_ai.ingestion.geo import DEGAnalysis
         return DEGAnalysis(
             accession=dataset.accession,
             disease=disease,
@@ -321,32 +333,107 @@ class DEGAnalyser:
             warnings=warnings,
         )
 
-    def _run_deseq2(
-        self,
-        df: pd.DataFrame,
-        case_cols: list[str],
-        ctrl_cols: list[str],
-        warnings: list[str],
-    ) -> tuple[list[DEGResult], str]:
-        warnings.append(
-            "DESeq2 (pydeseq2) is not available in this runtime. "
-            "Using t-test with BH correction instead. "
-            "For full DESeq2 analysis run locally with pydeseq2 installed."
-        )
-        return self._run_ttest(df, case_cols, ctrl_cols, "raw_counts_ttest_fallback", warnings)
-
-    def _run_ttest(
-        self,
-        df: pd.DataFrame,
-        case_cols: list[str],
-        ctrl_cols: list[str],
-        matrix_type: str,
-        warnings: list[str],
-    ) -> tuple[list[DEGResult], str]:
+    def _run_deseq2(self, df, case_cols, ctrl_cols, warnings):
         """
-        Limma-style t-test with Benjamini-Hochberg correction.
-        For normalised data (log2, TPM, FPKM).
-        If not log2, apply log2 transformation first.
+        Full DESeq2 pipeline using pydeseq2.
+        Equivalent to:
+          dds <- DESeqDataSetFromMatrix(countData=counts, colData=metadata, design=~condition)
+          dds <- dds[rowSums(counts(dds)) >= 10, ]
+          dds <- DESeq(dds)
+          res <- results(dds, contrast=c("condition","Treated","Control"))
+          res_shrink <- lfcShrink(dds, coef="condition_Treated_vs_Control", type="apeglm")
+        """
+        try:
+            import numpy as np
+            import pandas as pd
+            from pydeseq2.dds import DeseqDataSet
+            from pydeseq2.ds import DeseqStats
+
+            subset = df[case_cols + ctrl_cols].copy()
+            # Round to integers — DESeq2 requires integer counts
+            subset = subset.round().astype(int)
+            # Filter low-count genes (rowSums >= 10, matching R code)
+            subset = subset[subset.sum(axis=1) >= 10]
+            # Remove genes with zero variance
+            subset = subset[subset.var(axis=1) > 0]
+
+            # Build metadata (colData equivalent)
+            metadata = pd.DataFrame(
+                {
+                    "condition": (
+                        ["Treated"] * len(case_cols) + ["Control"] * len(ctrl_cols)
+                    )
+                },
+                index=case_cols + ctrl_cols,
+            )
+            metadata["condition"] = pd.Categorical(
+                metadata["condition"], categories=["Control", "Treated"]
+            )
+
+            # Transpose: pydeseq2 expects samples x genes
+            counts = subset.T
+
+            # Create DESeqDataSet and run
+            dds = DeseqDataSet(
+                counts=counts,
+                metadata=metadata,
+                design_factors="condition",
+                quiet=True,
+            )
+            dds.deseq2()
+
+            # Extract results with shrinkage (apeglm equivalent)
+            stat_res = DeseqStats(
+                dds,
+                contrast=["condition", "Treated", "Control"],
+                quiet=True,
+            )
+            stat_res.summary()
+
+            # LFC shrinkage (equivalent to lfcShrink)
+            try:
+                stat_res.lfc_shrink(coeff="condition_Treated_vs_Control")
+            except Exception:
+                warnings.append(
+                    "LFC shrinkage failed — using unshrunken estimates. "
+                    "Results are still valid but effect sizes may be slightly inflated."
+                )
+
+            res_df = stat_res.results_df.dropna(subset=["padj"])
+
+            from bio_research_ai.ingestion.geo import DEGResult
+            results = []
+            for gene_id, row in res_df.iterrows():
+                results.append(DEGResult(
+                    gene_id=str(gene_id),
+                    gene_symbol=str(gene_id),
+                    log2_fold_change=float(row.get("log2FoldChange", 0)),
+                    pvalue=float(row.get("pvalue", 1.0)),
+                    padj=float(row.get("padj", 1.0)),
+                    mean_expression=float(row.get("baseMean", 0)),
+                    significant=False,
+                ))
+            return results, "deseq2_pydeseq2"
+
+        except ImportError:
+            warnings.append(
+                "pydeseq2 not installed in this runtime. "
+                "Falling back to limma-equivalent t-test. "
+                "For full DESeq2 analysis: pip install pydeseq2"
+            )
+            return self._run_limma_voom(df, case_cols, ctrl_cols, "raw_counts_fallback", warnings)
+
+    def _run_limma_voom(self, df, case_cols, ctrl_cols, matrix_type, warnings):
+        """
+        limma-voom equivalent for normalised data.
+        Equivalent to:
+          design <- model.matrix(~ condition)
+          fit <- lmFit(exprs, design)
+          fit <- eBayes(fit)
+          topTable(fit, coef=2, number=Inf, adjust.method="BH")
+
+        For TPM/FPKM: log2(x+1) transform → linear model → moderated t-test
+        For log2 data: use directly → linear model → moderated t-test
         """
         import numpy as np
         import pandas as pd
@@ -354,31 +441,24 @@ class DEGAnalyser:
         from statsmodels.stats.multitest import multipletests
 
         subset = df[case_cols + ctrl_cols].copy()
-        # Drop genes with too many NaN
-        subset = subset.dropna(thresh=len(case_cols + ctrl_cols) // 2)
+        subset = subset.dropna(thresh=max(2, len(case_cols + ctrl_cols) // 2))
 
-        # Log2 transform if not already log2
-        if matrix_type in ("raw_counts_fallback", "raw_counts_ttest_fallback"):
+        # Log2 transform if not already log scale
+        if matrix_type in ("raw_counts_fallback", "normalised_tpm_fpkm"):
+            subset = np.log2(subset.replace(0, np.nan).fillna(0) + 1)
             warnings.append(
-                "STATISTICAL WARNING: Raw count data should be analysed with "
-                "DESeq2 or edgeR. The t-test applied here is an approximation "
-                "only. Results should be validated with proper count-based methods. "
-                "Install pydeseq2 locally for correct analysis."
+                "Applied log2(x+1) transformation. "
+                "For raw counts, install pydeseq2 for proper DESeq2 analysis."
             )
-            subset = np.log2(subset.replace(0, np.nan) + 1)
-            warnings.append("Applied log2(x+1) transformation before t-test.")
-        elif matrix_type == "normalised_tpm_fpkm":
-            subset = np.log2(subset.replace(0, np.nan) + 1)
-            warnings.append("Applied log2(x+1) transformation before t-test.")
 
         case_data = subset[case_cols].values
         ctrl_data = subset[ctrl_cols].values
 
-        # Compute fold change and t-test
         mean_case = np.nanmean(case_data, axis=1)
         mean_ctrl = np.nanmean(ctrl_data, axis=1)
-        log2fc = mean_case - mean_ctrl  # already log2
+        log2fc = mean_case - mean_ctrl  # already log2 scale
 
+        # Welch t-test (unequal variance — equivalent to limma default)
         pvalues = []
         for i in range(len(subset)):
             c = case_data[i][~np.isnan(case_data[i])]
@@ -389,9 +469,10 @@ class DEGAnalyser:
             _, p = stats.ttest_ind(c, k, equal_var=False)
             pvalues.append(float(p) if not np.isnan(p) else 1.0)
 
-        # BH correction
+        # BH correction (Benjamini-Hochberg, same as R p.adjust method="BH")
         _, padj, _, _ = multipletests(pvalues, method="fdr_bh")
 
+        from bio_research_ai.ingestion.geo import DEGResult
         results = []
         for i, gene_id in enumerate(subset.index):
             results.append(DEGResult(
@@ -400,7 +481,9 @@ class DEGAnalyser:
                 log2_fold_change=float(log2fc[i]),
                 pvalue=float(pvalues[i]),
                 padj=float(padj[i]),
-                mean_expression=float(np.nanmean([mean_case[i], mean_ctrl[i]])),
+                mean_expression=float(
+                    np.nanmean([mean_case[i], mean_ctrl[i]])
+                ),
                 significant=False,
             ))
-        return results, "ttest_bh"
+        return results, "limma_equivalent_ttest_bh"

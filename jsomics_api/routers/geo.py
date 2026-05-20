@@ -171,6 +171,59 @@ async def geo_analyse(
         deg_stats={"sig_up": deg.significant_up, "sig_down": deg.significant_down},
     )
 
+    # Visualisations
+    plots = {}
+    try:
+        from bio_research_ai.agents.deg_visualiser import (
+            volcano_plot, ma_plot, pca_plot, heatmap_plot, PlotBundle
+        )
+        sig_results = [r for r in deg.results if r.significant]
+        all_results = deg.results[:2000]  # cap for performance
+        plots["volcano"] = volcano_plot(
+            all_results,
+            title=f"{body.disease} — {body.accession}",
+            padj_threshold=body.padj_threshold,
+            log2fc_threshold=body.log2fc_threshold,
+        )
+        plots["ma_plot"] = ma_plot(all_results, title=f"MA Plot — {body.accession}")
+        plots["pca"]     = pca_plot(dataset, case_samples, control_samples)
+        plots["heatmap"] = heatmap_plot(all_results, dataset, top_n=50)
+    except Exception as e:
+        print(f"[geo] visualisation error: {e}")
+
+    # Functional enrichment on significant DEG gene symbols
+    enrichment = []
+    try:
+        from bio_research_ai.agents.enrichment import run_enrichment
+        sig_genes = list({r.gene_symbol for r in deg.results
+                         if r.significant and len(r.gene_symbol) <= 10})[:200]
+        if sig_genes:
+            enr_results = run_enrichment(
+                sig_genes,
+                databases=[
+                    "GO_Biological_Process_2023",
+                    "KEGG_2021_Human",
+                    "Reactome_2022",
+                ],
+                padj_threshold=0.05,
+                top_n=20,
+            )
+            enrichment = [
+                {
+                    "term_id":       r.term_id,
+                    "term_name":     r.term_name,
+                    "database":      r.database,
+                    "p_value":       round(r.p_value, 6),
+                    "adjusted_p":    round(r.adjusted_p, 6),
+                    "odds_ratio":    round(r.odds_ratio, 3),
+                    "overlap_genes": r.overlap_genes[:10],
+                    "gene_count":    r.gene_count,
+                }
+                for r in enr_results
+            ]
+    except Exception as e:
+        print(f"[geo] enrichment error: {e}")
+
     # Build response
     return {
         "accession": body.accession,
@@ -233,6 +286,8 @@ async def geo_analyse(
             "confidence": ai.confidence,
             "model": ai.model_used,
         },
+        "plots": plots,
+        "enrichment": enrichment,
     }
 
 
