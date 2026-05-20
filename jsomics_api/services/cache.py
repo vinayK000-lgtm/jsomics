@@ -34,19 +34,10 @@ def _make_key(
     query: str,
     disease: str | None,
     mode: str,
-    evidence_level: str,
-    max_results: int,
+    evidence_level: str | None = None,
+    max_results: int | None = None,
 ) -> str:
-    raw = "|".join(
-        [
-            query.strip().lower(),
-            (disease or "").strip().lower(),
-            mode,
-            evidence_level,
-            str(max_results),
-            "live-v2",
-        ]
-    )
+    raw = f"{query.strip().lower()}|{(disease or '').lower()}|{mode}|{evidence_level}|{max_results}"
     return "jsomics:research:" + hashlib.sha256(raw.encode("utf-8")).hexdigest()[:40]
 
 
@@ -54,8 +45,8 @@ async def get_cached(
     query: str,
     disease: str | None,
     mode: str,
-    evidence_level: str,
-    max_results: int,
+    evidence_level: str | None = None,
+    max_results: int | None = None,
 ) -> dict | None:
     key = _make_key(query, disease, mode, evidence_level, max_results)
 
@@ -90,9 +81,9 @@ async def set_cached(
     query: str,
     disease: str | None,
     mode: str,
-    evidence_level: str,
-    max_results: int,
-    result: dict,
+    evidence_level: str | None = None,
+    max_results: int | None = None,
+    result: dict | None = None,
     ttl_seconds: int | None = None,
 ) -> None:
     key = _make_key(query, disease, mode, evidence_level, max_results)

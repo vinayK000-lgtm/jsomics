@@ -10,6 +10,8 @@ RESEARCH_USE_DISCLAIMER = (
 
 
 def confidence_label(score: float) -> str:
+    if score <= 0.0:
+        return "exploratory — insufficient evidence"
     if score >= 0.75:
         return "high"
     if score >= 0.45:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from __future__ import annotations
 import sys
 import os
 
@@ -357,7 +358,16 @@ class DEGAnalyser:
         subset = subset.dropna(thresh=len(case_cols + ctrl_cols) // 2)
 
         # Log2 transform if not already log2
-        if matrix_type in ("raw_counts_fallback", "normalised_tpm_fpkm"):
+        if matrix_type in ("raw_counts_fallback", "raw_counts_ttest_fallback"):
+            warnings.append(
+                "STATISTICAL WARNING: Raw count data should be analysed with "
+                "DESeq2 or edgeR. The t-test applied here is an approximation "
+                "only. Results should be validated with proper count-based methods. "
+                "Install pydeseq2 locally for correct analysis."
+            )
+            subset = np.log2(subset.replace(0, np.nan) + 1)
+            warnings.append("Applied log2(x+1) transformation before t-test.")
+        elif matrix_type == "normalised_tpm_fpkm":
             subset = np.log2(subset.replace(0, np.nan) + 1)
             warnings.append("Applied log2(x+1) transformation before t-test.")
 

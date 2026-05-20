@@ -177,6 +177,9 @@ def report_confidence(
     literature_count: int,
     evidence_count: int,
 ) -> float:
+    if evidence_count < 10:
+        return 0.0
+
     target_confidences = [min(0.95, score / 10) for score in target_scores]
     literature_confidences = [min(0.85, 0.35 + literature_count * 0.05)] if literature_count else []
     values = marker_confidences + pathway_confidences + target_confidences + literature_confidences

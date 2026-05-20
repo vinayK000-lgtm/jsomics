@@ -1,8 +1,10 @@
 __pycache__/
 *.pyc
+*.pyo
 .env
 .venv/
 *.egg-info/
+jsomics.egg-info/
 dist/
 .DS_Store
 .pytest_cache/

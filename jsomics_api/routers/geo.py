@@ -25,8 +25,8 @@ class GEOAnalyseRequest(BaseModel):
     disease: str = Field(description="Disease or condition being studied")
     case_samples: list[str] = Field(default=[], description="Sample IDs for case group")
     control_samples: list[str] = Field(default=[], description="Sample IDs for control group")
-    padj_threshold: float = Field(default=0.05)
-    log2fc_threshold: float = Field(default=1.0)
+    padj_threshold: float = Field(default=0.1)
+    log2fc_threshold: float = Field(default=0.58)
     literature_query: str | None = Field(default=None, description="Custom PubMed query (optional)")
 
 
@@ -82,11 +82,6 @@ async def geo_analyse(
     request: Request,
     user: AuthUser = Depends(get_current_user),
 ):
-    from bio_research_ai.ingestion.geo import GEOClient, DEGAnalyser
-    from bio_research_ai.agents.cross_reference import CrossReferenceEngine
-    from bio_research_ai.agents.ai_interpreter import AIInterpreter
-    from bio_research_ai.ingestion.pubmed import PubMedClient
-
     """
     Full multi-omics analysis:
     1. Fetch GEO dataset
@@ -95,7 +90,12 @@ async def geo_analyse(
     4. Cross-reference DEG genes with literature
     5. AI interpretation via GPT-4o-mini
     """
+    from bio_research_ai.ingestion.geo import GEOClient, DEGAnalyser
+    from bio_research_ai.agents.cross_reference import CrossReferenceEngine
+    from bio_research_ai.agents.ai_interpreter import AIInterpreter
+    from bio_research_ai.ingestion.pubmed import PubMedClient
     import asyncio
+    import concurrent.futures
 
     # Fetch GEO dataset
     geo_client = GEOClient(email=settings.NCBI_EMAIL)
@@ -114,10 +114,9 @@ async def geo_analyse(
         if not case_samples or not control_samples:
             raise HTTPException(422, "Could not auto-detect case/control groups. Please specify sample IDs.")
 
-    # Run DEG analysis
-    analyser = DEGAnalyser()
-    try:
-        deg = analyser.analyse(
+    def _run_deg():
+        analyser = DEGAnalyser()
+        return analyser.analyse(
             dataset=dataset,
             case_samples=case_samples,
             control_samples=control_samples,
@@ -125,19 +124,25 @@ async def geo_analyse(
             padj_threshold=body.padj_threshold,
             log2fc_threshold=body.log2fc_threshold,
         )
+
+    def _run_pubmed():
+        pubmed_client = PubMedClient(email=settings.NCBI_EMAIL)
+        query = body.literature_query or f"{body.disease} gene expression RNA-seq"
+        try:
+            records = pubmed_client.ingest(query=query, disease=body.disease, limit=50)
+            return records, _extract_genes_from_records(records)
+        except Exception as e:
+            print(f"[GEO] PubMed error: {e}")
+            return [], []
+
+    loop = asyncio.get_event_loop()
+    try:
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            deg_future = loop.run_in_executor(pool, _run_deg)
+            pubmed_future = loop.run_in_executor(pool, _run_pubmed)
+            deg, (lit_records, literature_genes) = await asyncio.gather(deg_future, pubmed_future)
     except ValueError as e:
         raise HTTPException(422, str(e))
-
-    # Run PubMed literature mining
-    pubmed_query = body.literature_query or f"{body.disease} gene expression RNA-seq"
-    pubmed_client = PubMedClient(email=settings.NCBI_EMAIL)
-    try:
-        lit_records = pubmed_client.ingest(query=pubmed_query, disease=body.disease, limit=50)
-        literature_genes = _extract_genes_from_records(lit_records)
-    except Exception as e:
-        print(f"[GEO] PubMed error: {e}")
-        lit_records = []
-        literature_genes = []
 
     # Cross-reference
     xref = CrossReferenceEngine()
@@ -215,6 +220,7 @@ async def geo_analyse(
                 "pathways": g.pathways,
                 "drug_associations": g.drug_associations,
                 "rationale": g.rationale,
+                "disclaimer": "Gene symbols extracted by regex pattern matching. Cross-check against HGNC database before reporting.",
             }
             for g in cross_refs[:50]
         ],
@@ -232,18 +238,38 @@ async def geo_analyse(
 
 def _auto_assign_groups(dataset) -> tuple[list[str], list[str]]:
     """Try to auto-detect case/control groups from sample metadata."""
-    case_keywords = {"disease", "tumor", "cancer", "case", "patient", "affected", "treated"}
-    control_keywords = {"normal", "control", "healthy", "untreated", "wild", "wt"}
+    case_keywords = {
+        "disease", "tumor", "tumour", "cancer", "case", "patient",
+        "affected", "treated", "knockdown", "knockout", "ko", "kd",
+        "mutant", "mut", "shRNA", "siRNA", "overexpression", "OE",
+        "stimulated", "infected", "diabetic", "fibrotic", "injured"
+    }
+    control_keywords = {
+        "normal", "control", "ctrl", "healthy", "untreated", "wild",
+        "wt", "wildtype", "mock", "scramble", "vehicle", "empty",
+        "adjacent", "paired", "baseline", "naive", "uninduced"
+    }
     case_samples, control_samples = [], []
     for s in dataset.samples:
         text = (s.title + " " + " ".join(s.characteristics.values())).lower()
-        is_case = any(kw in text for kw in case_keywords)
-        is_ctrl = any(kw in text for kw in control_keywords)
+        is_case = any(kw.lower() in text for kw in case_keywords)
+        is_ctrl = any(kw.lower() in text for kw in control_keywords)
         if is_case and not is_ctrl:
             case_samples.append(s.sample_id)
         elif is_ctrl and not is_case:
             control_samples.append(s.sample_id)
     return case_samples, control_samples
+
+
+NOT_GENES = {
+    "RNA", "DNA", "THE", "FOR", "AND", "WITH", "FROM", "THAT",
+    "THIS", "WERE", "HAVE", "BEEN", "ALSO", "INTO", "SUCH",
+    "USA", "UK", "CI", "OR", "IN", "OF", "IS", "AT", "BY",
+    "AS", "AN", "BE", "DO", "GO", "UP", "TO", "ON", "NO",
+    "PCR", "PBS", "BSA", "SDS", "PAGE", "ELISA", "FISH",
+    "MRI", "CT", "PET", "TNF", "HIV", "HPV", "EBV", "CMV",
+    "IHC", "WB", "IP", "IF", "LC", "MS", "NMR", "GEL",
+}
 
 
 def _extract_genes_from_records(records) -> list[str]:
@@ -253,6 +279,7 @@ def _extract_genes_from_records(records) -> list[str]:
     genes = []
     for r in records:
         text = getattr(r, "text", "") + " " + getattr(r, "title", "")
-        matches = gene_pattern.findall(text)
-        genes.extend(matches)
+        for match in gene_pattern.findall(text):
+            if match not in NOT_GENES and len(match) >= 2:
+                genes.append(match)
     return genes
