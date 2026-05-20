@@ -71,7 +71,14 @@ app = FastAPI(
 # ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=list(settings.ALLOWED_ORIGINS),
+    allow_origins=[
+        "https://jsomics.com",
+        "https://www.jsomics.com",
+        "https://jsomics-api.fly.dev",
+        "https://vinayk000-lgtm.github.io",
+        "http://localhost:3000",
+        "http://127.0.0.1:5500",
+    ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Request-ID", "X-API-Key"],
@@ -165,6 +172,6 @@ async def root():
         "service": "JSOMICS API",
         "version": "1.0.0",
         "status": "ok",
+        "frontend": "https://jsomics.com",
         "docs": "/api/docs",
-        "research": "POST /v1/research",
     }
