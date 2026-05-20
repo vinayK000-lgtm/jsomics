@@ -21,7 +21,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from jsomics_api.config import settings
 from jsomics_api.engine import build_orchestrator
@@ -115,12 +114,6 @@ else:
                 "detail": "GEO analysis is unavailable because scientific Python dependencies are not installed in this runtime.",
             },
         )
-
-# ── Serve built-in frontend (bio_research_ai/web/) ───────────────────────────
-_web_dir = Path(__file__).resolve().parents[1] / "bio_research_ai" / "web"
-if _web_dir.exists():
-    app.mount("/static", StaticFiles(directory=_web_dir), name="web_static")
-    app.mount("/app", StaticFiles(directory=_web_dir, html=True), name="web")
 
 # ── GPT Action OpenAPI spec ───────────────────────────────────────────────────
 _gpt_spec = Path(__file__).resolve().parents[1] / "gpt" / "jsomics_action_openapi.yaml"

@@ -1,11 +1,12 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/v1/:path*", "destination": "/api/index.py" },
-    { "source": "/health", "destination": "/api/index.py" },
-    { "source": "/ready", "destination": "/api/index.py" },
-    { "source": "/api/:path*", "destination": "/api/index.py" },
-    { "source": "/:path*", "destination": "/frontend/index.html" }
+    { "source": "/v1/:path*",  "destination": "/api/index.py" },
+    { "source": "/health",     "destination": "/api/index.py" },
+    { "source": "/ready",      "destination": "/api/index.py" },
+    { "source": "/api/docs",   "destination": "/api/index.py" },
+    { "source": "/api/redoc",  "destination": "/api/index.py" },
+    { "source": "/(.*)",       "destination": "/frontend/index.html" }
   ],
   "headers": [
     {

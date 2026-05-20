@@ -7,19 +7,18 @@ PubMed literature mining, and GPT-4o-mini interpretation into one unified workfl
 
 ## What makes JSOMICS different
 
-Most tools are siloed — you run DESeq2 separately, search PubMed separately,
-and manually reconcile the results. JSOMICS runs both in parallel and
-cross-references them automatically, surfacing genes confirmed by both
-expression data AND published literature as HIGH CONFIDENCE targets.
+Most research tools are siloed. You run DESeq2 separately, search PubMed
+separately, and manually reconcile the results. JSOMICS runs both in parallel
+and cross-references them automatically — genes confirmed by both expression
+data AND published literature are surfaced as HIGH CONFIDENCE targets.
 
 ## Architecture## Core user workflow
 
 1. Enter a GEO accession (e.g. GSE12345) or search by disease keyword
-2. Select case vs control sample groups (or auto-detect)
-3. Platform runs DEG analysis + PubMed search in parallel
-4. Cross-reference engine finds genes in both tracks → HIGH CONFIDENCE targets
-5. GPT-4o-mini interprets results and suggests follow-up analyses
-6. Export gene list, pathway enrichment, and full report
+2. Platform auto-detects case vs control sample groups
+3. DEG analysis (t-test + BH correction) runs in parallel with PubMed search
+4. Cross-reference engine finds genes confirmed in both tracks
+5. GPT-4o-mini interprets findings and suggests follow-up analyses
 
 ## API endpoints
 
@@ -47,7 +46,22 @@ expression data AND published literature as HIGH CONFIDENCE targets.
 | researcher | 10,000 |
 | lab | unlimited |
 
-## Environment variables (Vercel)## Local development
+## Environment variables (set in Vercel dashboard)
+
+| Variable | Description |
+|----------|-------------|
+| SUPABASE_URL | https://ajfxbmnzfrrlvzjozygt.supabase.co |
+| SUPABASE_ANON_KEY | Supabase public anon key |
+| SUPABASE_SERVICE_ROLE_KEY | Supabase service role key (secret) |
+| SUPABASE_JWT_SECRET | JWT signing secret |
+| SUPABASE_DATABASE_URL | Postgres connection URI (session pooler) |
+| NCBI_EMAIL | Email for NCBI rate limit compliance |
+| OPENAI_API_KEY | GPT-4o-mini for AI interpretation |
+| ENV | production |
+| KV_REST_API_URL | Upstash Redis URL (optional, for persistent cache) |
+| KV_REST_API_TOKEN | Upstash Redis token (optional) |
+
+## Local development
 
 ```bash
 pip install -e ".[storage,dev]"
@@ -58,6 +72,6 @@ uvicorn jsomics_api.main:app --reload --port 8000
 
 ## Tech stack
 
-FastAPI · Supabase · Vercel · Supabase Auth · GitHub OAuth ·
-NCBI E-utilities · KEGG REST API · GEO FTP · GPT-4o-mini ·
-scipy · statsmodels · pandas · numpy
+FastAPI · Supabase · Vercel · GitHub OAuth · NCBI E-utilities ·
+KEGG REST API · PubChem REST API · GEO FTP · GPT-4o-mini ·
+scipy · statsmodels · pandas · numpy · httpx
