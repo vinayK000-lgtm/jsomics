@@ -23,9 +23,28 @@ Flow:
 import gzip
 import io
 import re
-import urllib.request
 from dataclasses import dataclass, field
 from typing import Optional
+
+
+def _ncbi_get(url: str, timeout: int = 30) -> bytes:
+    """
+    NCBI blocks urllib requests without a User-Agent header (returns 403).
+    Always use this function instead of urllib.request.urlopen directly.
+    """
+    import urllib.request
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": (
+                "JSOMICS/1.0 (multi-omics research platform; "
+                "https://jsomics.com; research use only)"
+            ),
+            "Accept": "application/json, text/plain, */*",
+        }
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return r.read()
 
 
 @dataclass
@@ -91,12 +110,16 @@ class GEOClient:
     def search(self, keyword: str, limit: int = 10) -> list[dict]:
         """Search GEO for RNA-seq datasets matching a keyword."""
         import urllib.parse
-        query = urllib.parse.quote(f"{keyword}[Title] AND RNA-seq[All Fields] AND Homo sapiens[Organism]")
+        query = urllib.parse.quote(
+            f'({keyword}[Title] OR {keyword}[All Fields]) '
+            f'AND (RNA-seq[All Fields] OR RNA-Seq[All Fields] OR "expression profiling by high throughput sequencing"[DataSet Type]) '
+            f'AND Homo sapiens[Organism] '
+            f'AND gse[Entry Type]'
+        )
         url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=gds&term={query}&retmax={limit}&retmode=json&email={self.email}"
         try:
-            with urllib.request.urlopen(url, timeout=15) as r:
-                import json
-                data = json.loads(r.read())
+            import json
+            data = json.loads(_ncbi_get(url, timeout=15))
             ids = data.get("esearchresult", {}).get("idlist", [])
             if not ids:
                 return []
@@ -111,8 +134,7 @@ class GEOClient:
         id_str = ",".join(ids)
         url = f"https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=gds&id={id_str}&retmode=json&email={self.email}"
         try:
-            with urllib.request.urlopen(url, timeout=15) as r:
-                data = json.loads(r.read())
+            data = json.loads(_ncbi_get(url, timeout=15))
             results = []
             for uid in ids:
                 item = data.get("result", {}).get(uid, {})
@@ -132,16 +154,32 @@ class GEOClient:
 
     def fetch_dataset(self, accession: str) -> GEODataset | None:
         """Fetch a GEO dataset by accession number."""
+        import gzip
+
         accession = accession.strip().upper()
         stub = self._stub(accession)
         url = self.MATRIX_URL.format(stub=stub, acc=accession)
-        print(f"[GEO] Fetching matrix: {url}")
+        print(f"[GEO] Fetching: {url}")
         try:
-            with urllib.request.urlopen(url, timeout=60) as r:
-                raw = gzip.decompress(r.read()).decode("utf-8", errors="replace")
+            raw_bytes = _ncbi_get(url, timeout=55)
+            try:
+                raw = gzip.decompress(raw_bytes).decode("utf-8", errors="replace")
+            except Exception:
+                raw = raw_bytes.decode("utf-8", errors="replace")
             return self._parse_matrix_file(accession, raw)
         except Exception as e:
             print(f"[GEO] fetch error for {accession}: {e}")
+            try:
+                url2 = f"https://ftp.ncbi.nlm.nih.gov/geo/series/{stub}/{accession}/matrix/"
+                listing = _ncbi_get(url2, timeout=10).decode("utf-8", errors="replace")
+                gz_files = re.findall(r'href="([^"]+\.txt\.gz)"', listing)
+                if gz_files:
+                    url3 = url2 + gz_files[0]
+                    raw_bytes = _ncbi_get(url3, timeout=55)
+                    raw = gzip.decompress(raw_bytes).decode("utf-8", errors="replace")
+                    return self._parse_matrix_file(accession, raw)
+            except Exception as e2:
+                print(f"[GEO] alternate fetch also failed: {e2}")
             return None
 
     def _parse_matrix_file(self, accession: str, text: str) -> GEODataset:

@@ -32,6 +32,13 @@ except ImportError as e:
     print(f"[JSOMICS] GEO router unavailable: {e}")
     GEO_AVAILABLE = False
 
+try:
+    from jsomics_api.routers import geo_jobs
+    GEO_JOBS_AVAILABLE = True
+except ImportError as e:
+    print(f"[JSOMICS] GEO jobs router unavailable: {e}")
+    GEO_JOBS_AVAILABLE = False
+
 
 logger = logging.getLogger(__name__)
 
@@ -114,6 +121,8 @@ else:
                 "detail": "GEO analysis is unavailable because scientific Python dependencies are not installed in this runtime.",
             },
         )
+if GEO_JOBS_AVAILABLE:
+    app.include_router(geo_jobs.router, prefix="/v1/geo", tags=["geo-jobs"])
 
 # ── GPT Action OpenAPI spec ───────────────────────────────────────────────────
 _gpt_spec = Path(__file__).resolve().parents[1] / "gpt" / "jsomics_action_openapi.yaml"
