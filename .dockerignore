@@ -8,6 +8,7 @@ __pycache__/
 venv/
 node_modules/
 .vercel/
+.pytest_cache/
 .DS_Store
 tests/
 docs/
@@ -15,6 +16,8 @@ frontend/
 github-pages/
 gpt/
 scripts/
+supabase/
+*.zip
 *.md
 Procfile
 railway.json
