@@ -63,8 +63,8 @@ app = FastAPI(
         "biomarker identification, and drug target discovery."
     ),
     version="1.0.0",
-    docs_url="/api/docs" if settings.ENV != "production" else None,
-    redoc_url="/api/redoc" if settings.ENV != "production" else None,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
     lifespan=lifespan,
 )
 
