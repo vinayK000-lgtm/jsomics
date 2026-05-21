@@ -193,6 +193,25 @@ async def _execute_geo_pipeline(job_id: str, payload: dict) -> dict:
         message=f"Sample groups: {len(case_samples)} case, "
                 f"{len(control_samples)} control. Running DEG + literature in parallel...")
 
+    # Stage 2b: QC check
+    await update_job(job_id, progress=26,
+        message="Running QC checks - sample count, missing values, PCA...")
+
+    try:
+        from bio_research_ai.agents.qc import run_qc
+        qc_result = run_qc(dataset, case_samples, control_samples)
+
+        if not qc_result.passed:
+            raise ValueError(
+                "QC FAILED: " + " | ".join(qc_result.errors)
+            )
+
+        if qc_result.warnings:
+            print(f"[QC] {len(qc_result.warnings)} warnings: "
+                  f"{qc_result.warnings[0]}")
+    except ImportError:
+        qc_result = None
+
     # ── Stage 3+4: DEG analysis + PubMed (parallel) ────────────────────────
     def _run_deg():
         analyser = DEGAnalyser()
@@ -225,6 +244,22 @@ async def _execute_geo_pipeline(job_id: str, payload: dict) -> dict:
             )
     except ValueError as e:
         raise ValueError(str(e))
+
+    # Stage 3b: Gene annotation
+    await update_job(job_id, progress=52,
+        message="Annotating gene IDs via MyGene.info...")
+    try:
+        from bio_research_ai.agents.gene_annotator import annotate_genes
+        gene_ids = [r.gene_symbol for r in deg.results[:500]]
+        annotations = annotate_genes(gene_ids, species="human")
+        # Update gene symbols in DEG results
+        for r in deg.results:
+            ann = annotations.get(r.gene_symbol)
+            if ann and ann.found and ann.symbol:
+                r.gene_symbol = ann.symbol
+    except Exception as e:
+        print(f"[geo_jobs] gene annotation: {e}")
+        annotations = {}
 
     await update_job(job_id, progress=55,
         message=f"DEG done: {deg.significant_up}↑ {deg.significant_down}↓ significant. "
@@ -337,9 +372,33 @@ async def _execute_geo_pipeline(job_id: str, payload: dict) -> dict:
             "title": dataset.title,
             "organism": dataset.organism,
             "matrix_type": dataset.matrix_type,
+            "matrix_type_info": dataset.matrix_type_info,
             "sample_count": dataset.sample_count,
             "case_samples": case_samples,
             "control_samples": control_samples,
+        },
+        "qc": {
+            "passed": qc_result.passed if qc_result else True,
+            "recommendation": qc_result.recommendation if qc_result else "",
+            "warnings": qc_result.warnings if qc_result else [],
+            "errors": qc_result.errors if qc_result else [],
+            "stats": qc_result.stats if qc_result else {},
+            "plots": {
+                "pca_qc": (qc_result.plots.get("pca", "") if qc_result else ""),
+            },
+        },
+        "data_type_info": dataset.matrix_type_info,
+        "gene_annotations": {
+            gid: {
+                "symbol": a.symbol,
+                "name": a.name,
+                "ensembl_id": a.ensembl_id,
+                "entrez_id": a.entrez_id,
+                "biotype": a.biotype,
+                "description": a.description,
+            }
+            for gid, a in (annotations or {}).items()
+            if a.found
         },
         "deg": {
             "method": deg.method,

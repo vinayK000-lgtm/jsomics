@@ -65,6 +65,7 @@ class GEODataset:
     platform: str
     sample_count: int
     matrix_type: str  # "raw_counts" | "normalised" | "unknown"
+    matrix_type_info: dict = field(default_factory=dict)
     samples: list[GEOSample] = field(default_factory=list)
     expression_matrix: Optional[pd.DataFrame] = None  # genes x samples
 
@@ -236,6 +237,7 @@ class GEOClient:
         # Parse expression matrix
         matrix_df = None
         matrix_type = "unknown"
+        matrix_type_info = {}
         if data_lines:
             try:
                 header = data_lines[0].split("\t")
@@ -259,7 +261,8 @@ class GEOClient:
                         index=gene_ids[:len(rows)],
                         columns=cols[:n_cols]
                     )
-                    matrix_type = self._detect_matrix_type(matrix_df)
+                    matrix_type_info = self._detect_matrix_type(matrix_df)
+                    matrix_type = matrix_type_info.get("type", "unknown")
             except Exception as e:
                 print(f"[GEO] matrix parse error: {e}")
 
@@ -271,34 +274,138 @@ class GEOClient:
             platform=metadata.get("platform", ""),
             sample_count=len(samples),
             matrix_type=matrix_type,
+            matrix_type_info=matrix_type_info,
             samples=samples,
             expression_matrix=matrix_df,
         )
 
-    def _detect_matrix_type(self, df: pd.DataFrame) -> str:
+    def _detect_matrix_type(self, df) -> dict:
         """
-        Detect whether matrix contains raw counts or normalised values.
-        Raw counts: integers, many zeros, large values (>1000)
-        Normalised: floats, log2-scale (0-20 range) or TPM/FPKM (continuous)
+        Detect data type and recommend correct statistical method.
+        Returns a dict with type, method, confidence, warnings.
         """
         import numpy as np
 
         sample = df.iloc[:, 0].dropna()
         if len(sample) == 0:
-            return "unknown"
-        # Check if all values are integers
-        is_integer = np.all(sample == sample.astype(int))
-        max_val = sample.max()
-        mean_val = sample.mean()
-        zero_frac = (sample == 0).mean()
+            return {
+                "type": "unknown",
+                "method": "ttest_bh",
+                "confidence": "low",
+                "warnings": ["Could not detect data type - no valid values found"]
+            }
 
-        if is_integer and max_val > 1000 and zero_frac > 0.1:
-            return "raw_counts"
-        elif max_val <= 25 and mean_val < 15:
-            return "normalised_log2"
-        elif max_val > 25:
-            return "normalised_tpm_fpkm"
-        return "normalised"
+        max_val = float(sample.max())
+        mean_val = float(sample.mean())
+        median_val = float(sample.median())
+        zero_frac = float((sample == 0).mean())
+        is_integer = bool(np.all(sample == sample.round()))
+        negative = bool((sample < 0).any())
+        n_genes = len(df)
+
+        warnings = []
+        n_samples = len(df.columns)
+        if n_samples < 3:
+            warnings.append(
+                f"Only {n_samples} samples detected. DEG results are "
+                f"exploratory only and should not be reported as final evidence. "
+                f"A minimum of 3 replicates per group is required for reliable statistics."
+            )
+        if n_samples < 6:
+            warnings.append(
+                "Fewer than 6 total samples. Statistical power is very low. "
+                "Consider validation in an independent dataset."
+            )
+
+        # Raw integer counts - DESeq2 / edgeR
+        if is_integer and not negative and max_val > 500 and zero_frac > 0.05:
+            return {
+                "type": "raw_counts",
+                "label": "Raw RNA-seq count matrix",
+                "method": "deseq2",
+                "method_label": "DESeq2 (negative binomial GLM)",
+                "confidence": "high",
+                "warnings": warnings,
+                "notes": "Raw integer counts detected. DESeq2 is the gold standard. "
+                         "Size factor normalisation and dispersion estimation will be applied."
+            }
+
+        # Log2 normalised - limma
+        if not negative and 0 < max_val <= 20 and mean_val < 12:
+            return {
+                "type": "normalised_log2",
+                "label": "Log2-normalised expression matrix",
+                "method": "limma_ttest",
+                "method_label": "Limma-style moderated t-test + BH correction",
+                "confidence": "high",
+                "warnings": warnings,
+                "notes": "Log2-scale values detected (max=" + str(round(max_val, 1)) + "). "
+                         "This is likely microarray or pre-normalised RNA-seq. "
+                         "Applying linear model with BH correction."
+            }
+
+        # Log2 with negatives - likely log2 ratio / fold change data
+        if negative and max_val <= 15:
+            return {
+                "type": "log2_ratio",
+                "label": "Log2 ratio / fold-change matrix",
+                "method": "limma_ttest",
+                "method_label": "Limma-style moderated t-test + BH correction",
+                "confidence": "medium",
+                "warnings": warnings + [
+                    "Negative values detected - this may be log2 ratio data. "
+                    "Verify that case and control samples are correctly assigned."
+                ],
+                "notes": "Log2 ratio data detected. Using moderated t-test."
+            }
+
+        # TPM / FPKM / RPKM - needs log transform first
+        if not is_integer and not negative and max_val > 20 and mean_val < 500:
+            return {
+                "type": "normalised_tpm",
+                "label": "TPM / FPKM / RPKM normalised matrix",
+                "method": "limma_ttest",
+                "method_label": "Log2 transform -> limma-style moderated t-test",
+                "confidence": "medium",
+                "warnings": warnings + [
+                    "TPM/FPKM-style values detected. Log2(x+1) transformation "
+                    "will be applied before differential analysis. "
+                    "DESeq2 is not appropriate for pre-normalised data."
+                ],
+                "notes": "Continuous normalised values. Log2 transform applied before analysis."
+            }
+
+        # Very large values - possibly raw microarray signal
+        if max_val > 10000:
+            return {
+                "type": "microarray_raw",
+                "label": "Raw microarray signal intensity",
+                "method": "limma_ttest",
+                "method_label": "Log2 transform -> limma-style moderated t-test",
+                "confidence": "medium",
+                "warnings": warnings + [
+                    "Large intensity values suggest raw microarray data. "
+                    "Log2 transformation will be applied. "
+                    "Background correction is recommended before upload."
+                ],
+                "notes": "Raw microarray intensities detected."
+            }
+
+        return {
+            "type": "unknown",
+            "label": "Unknown expression matrix format",
+            "method": "limma_ttest",
+            "method_label": "Log2 transform -> moderated t-test (safe fallback)",
+            "confidence": "low",
+            "warnings": warnings + [
+                "Could not confidently detect data type. "
+                "Using conservative fallback method. "
+                "Please verify your input data format."
+            ],
+            "notes": "Unknown format. Stats: max=" + str(round(max_val, 2)) +
+                     " mean=" + str(round(mean_val, 2)) +
+                     " zeros=" + str(round(zero_frac * 100, 1)) + "%"
+        }
 
 
 class DEGAnalyser:
@@ -482,7 +589,13 @@ class DEGAnalyser:
         subset = subset.dropna(thresh=max(2, len(case_cols + ctrl_cols) // 2))
 
         # Log2 transform if not already log scale
-        if matrix_type in ("raw_counts_fallback", "normalised_tpm_fpkm"):
+        if matrix_type in (
+            "raw_counts_fallback",
+            "normalised_tpm_fpkm",
+            "normalised_tpm",
+            "microarray_raw",
+            "unknown",
+        ):
             subset = np.log2(subset.replace(0, np.nan).fillna(0) + 1)
             warnings.append(
                 "Applied log2(x+1) transformation. "

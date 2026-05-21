@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 from typing import Callable
 
 from bio_research_ai.ingestion.kegg import KeggClient
-from bio_research_ai.ingestion.pubchem import PubChemClient
 from bio_research_ai.ingestion.pubmed import PubMedClient
 from bio_research_ai.models import IngestionRecord
 from jsomics_api.config import settings
@@ -45,12 +44,11 @@ async def fetch_live_evidence_bundle(
     No external record is stored in Supabase here; this function is designed for temporary
     Vercel KV/Redis caching and fast, cache-first UI jobs.
     """
-    omics = [x.lower() for x in (omics or ["literature", "biomarkers", "pathways", "drug_targets"])]
+    omics = [x.lower() for x in (omics or ["literature", "biomarkers", "pathways"])]
     search_query = build_search_query(query, disease)
     depth_factor = {"quick": 1, "deep": 2, "systematic": 3}.get(search_depth, 1)
     pubmed_limit = max(5, min(max_results * depth_factor * 2, 60))
     kegg_limit = max(3, min(max_results * depth_factor, 25))
-    pubchem_limit = max(2, min(max_results * depth_factor, 20))
     timeout = max(4.0, float(getattr(settings, "SOURCE_TIMEOUT_SECONDS", 10)))
 
     jobs: list[tuple[str, Callable[[], list[IngestionRecord]]]] = []
@@ -58,8 +56,6 @@ async def fetch_live_evidence_bundle(
         jobs.append(("pubmed", lambda: _fetch_pubmed(search_query, disease, pubmed_limit)))
     if any(x in omics for x in ["pathways", "genomics", "proteomics"]):
         jobs.append(("kegg", lambda: _fetch_kegg(search_query, disease, kegg_limit)))
-    if any(x in omics for x in ["drug_targets", "compounds", "metabolomics", "proteomics"]):
-        jobs.append(("pubchem", lambda: _fetch_pubchem(query, disease, pubchem_limit)))
 
     bundle = LiveEvidenceBundle(agent_status={name: "running" for name, _ in jobs})
     results = await asyncio.gather(*[_run_source(name, fn, timeout) for name, fn in jobs], return_exceptions=True)
@@ -95,11 +91,6 @@ def _fetch_pubmed(query: str, disease: str | None, limit: int) -> list[Ingestion
 
 def _fetch_kegg(query: str, disease: str | None, limit: int) -> list[IngestionRecord]:
     client = KeggClient()
-    return client.ingest(query=query, disease=disease, limit=limit)
-
-
-def _fetch_pubchem(query: str, disease: str | None, limit: int) -> list[IngestionRecord]:
-    client = PubChemClient()
     return client.ingest(query=query, disease=disease, limit=limit)
 
 

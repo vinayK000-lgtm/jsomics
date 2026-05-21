@@ -757,6 +757,19 @@ function renderGeoDataset(data) {
         <div style="font-weight:700;font-size:0.95rem;margin-bottom:4px">
           ${esc(data.title || data.accession)}
         </div>
+        ${data.matrix_type_info ? `
+          <div style="margin-top:8px;padding:8px 10px;border-radius:8px;
+                      background:rgba(2,132,199,0.06);border:1px solid rgba(2,132,199,0.2);
+                      font-family:var(--mono);font-size:0.72rem">
+            <strong style="color:var(--cyan)">
+              Detected: ${esc(data.matrix_type_info.label||data.matrix_type||'Unknown')}
+            </strong>
+            <br>Recommended method: ${esc(data.matrix_type_info.method_label||'')}
+            <br>Confidence: ${esc(data.matrix_type_info.confidence||'')}
+            ${(data.matrix_type_info.warnings||[]).map(w=>
+              '<br><span style="color:#d97706">⚠ '+esc(w)+'</span>'
+            ).join('')}
+          </div>` : ''}
         <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">
           ${esc(data.organism)} - ${esc(data.platform||'')} -
           ${samples.length} samples - type: ${esc(data.matrix_type||'unknown')}
@@ -868,6 +881,55 @@ function renderGeoResults(data) {
   const xref = data.cross_reference || [];
   const plots = data.plots || {};
   const enrichment = data.enrichment || [];
+  const qc = data.qc || {};
+  const dtInfo = data.data_type_info || data.dataset?.matrix_type_info || {};
+  const qcColor = qc.errors?.length ? '#ef4444'
+                : qc.warnings?.length ? '#d97706' : '#059669';
+
+  const qcBanner = `
+    <div style="border-radius:10px;border:1px solid ${qcColor}33;
+                background:${qcColor}0d;padding:14px 16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                  gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-weight:600;color:${qcColor};font-size:0.88rem;
+                      margin-bottom:4px">
+            ${qc.errors?.length ? '❌ QC Failed' :
+              qc.warnings?.length ? '⚠ QC Passed with warnings' : '✓ QC Passed'}
+          </div>
+          <div style="font-family:var(--mono);font-size:0.75rem;color:var(--muted)">
+            ${esc(qc.recommendation || '')}
+          </div>
+          ${(qc.warnings||[]).map(w=>`
+            <div style="font-family:var(--mono);font-size:0.72rem;
+                        color:#d97706;margin-top:4px">⚠ ${esc(w)}</div>
+          `).join('')}
+          ${(qc.errors||[]).map(e=>`
+            <div style="font-family:var(--mono);font-size:0.72rem;
+                        color:#ef4444;margin-top:4px">✗ ${esc(e)}</div>
+          `).join('')}
+        </div>
+        <div style="text-align:right;font-family:var(--mono);font-size:0.72rem;
+                    color:var(--muted);min-width:160px">
+          <div style="color:var(--text);font-weight:600;margin-bottom:2px">
+            ${esc(dtInfo.label || data.dataset?.matrix_type || 'Unknown data type')}
+          </div>
+          <div>Method: ${esc(dtInfo.method_label || data.deg?.method || '')}</div>
+          <div>Confidence: ${esc(dtInfo.confidence || '')}</div>
+          <div>n= ${qc.stats?.n_case||0} case / ${qc.stats?.n_control||0} control</div>
+          <div>Genes kept: ${(qc.stats?.n_genes_kept||0).toLocaleString()}</div>
+        </div>
+      </div>
+      ${qc.plots?.pca_qc ? `
+        <details style="margin-top:10px">
+          <summary style="font-family:var(--mono);font-size:0.72rem;
+                          color:var(--cyan);cursor:pointer">
+            View QC PCA plot
+          </summary>
+          <img src="data:image/png;base64,${qc.plots.pca_qc}"
+               style="width:100%;max-width:500px;border-radius:8px;margin-top:8px"/>
+        </details>` : ''}
+    </div>`;
 
   const topGenes = (deg.top_genes || []).slice(0, 15).map(g => ({
     symbol: g.symbol, log2fc: g.log2fc, padj: g.padj,
@@ -904,7 +966,7 @@ function renderGeoResults(data) {
              style="width:100%;border-radius:8px;margin-top:8px" />
       </div>`).join('');
 
-  document.getElementById('geoResults').innerHTML = `
+  document.getElementById('geoResults').innerHTML = qcBanner + `
     <div class="ai-box glass">
       <div class="label">AI Interpretation</div>
       <div>${esc(ai.deg_summary || 'No interpretation returned.')}</div>

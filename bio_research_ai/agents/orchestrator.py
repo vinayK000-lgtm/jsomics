@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from bio_research_ai.agents.biomarker import BiomarkerIdentifierAgent
-from bio_research_ai.agents.drug_target import DrugTargetDiscoveryAgent
 from bio_research_ai.agents.literature import LiteratureMiningAgent
-from bio_research_ai.agents.pathway import PathwayAnalystAgent
 from bio_research_ai.guardrails import (
     build_caveats,
     confidence_label,
@@ -27,16 +25,12 @@ class ResearchOrchestrator:
         repository: ResearchRepository,
         vector_store: InMemoryVectorStore,
         biomarker_agent: BiomarkerIdentifierAgent | None = None,
-        pathway_agent: PathwayAnalystAgent | None = None,
         literature_agent: LiteratureMiningAgent | None = None,
-        drug_target_agent: DrugTargetDiscoveryAgent | None = None,
     ) -> None:
         self.repository = repository
         self.vector_store = vector_store
         self.biomarker_agent = biomarker_agent or BiomarkerIdentifierAgent()
-        self.pathway_agent = pathway_agent or PathwayAnalystAgent()
         self.literature_agent = literature_agent or LiteratureMiningAgent()
-        self.drug_target_agent = drug_target_agent or DrugTargetDiscoveryAgent()
 
     @classmethod
     def from_records(cls, records: list[IngestionRecord]) -> "ResearchOrchestrator":
@@ -60,20 +54,11 @@ class ResearchOrchestrator:
 
         if "biomarkers" in agents_to_run:
             biomarkers = self.biomarker_agent.identify(evidence_records, limit=research_query.max_results)
-        if "pathways" in agents_to_run:
-            pathways = self.pathway_agent.identify(evidence_records, limit=research_query.max_results)
         if "literature" in agents_to_run:
             literature_findings, knowledge_graph_triples = self.literature_agent.analyze(
                 evidence_records,
                 query=research_query.query,
                 disease=research_query.disease,
-                limit=research_query.max_results,
-            )
-        if "drug_targets" in agents_to_run:
-            drug_targets = self.drug_target_agent.discover(
-                records=evidence_records,
-                biomarkers=biomarkers,
-                pathways=pathways,
                 limit=research_query.max_results,
             )
 
@@ -96,11 +81,6 @@ class ResearchOrchestrator:
         limitations = []
         if not evidence:
             limitations.append("No local evidence matched the query. Ingest PubMed/KEGG data first.")
-        if "drug_targets" in agents_to_run:
-            limitations.append(
-                "Drug target scoring is based on local evidence text; add ChEMBL, DrugBank, "
-                "UniProt, PDB, and dependency-screen ingestion before production use."
-            )
         caveats = build_caveats(research_query, evidence, limitations)
 
         return ResearchReport(
@@ -204,11 +184,11 @@ def dedupe_records(records: list[IngestionRecord]) -> list[IngestionRecord]:
 def select_agents(research_query: ResearchQuery) -> set[str]:
     mode = research_query.mode
     if mode == ResearchMode.BIOMARKERS:
-        return {"biomarkers", "pathways"}
+        return {"biomarkers", "literature"}
     if mode == ResearchMode.PATHWAYS:
-        return {"pathways"}
+        return {"literature"}
     if mode == ResearchMode.DRUG_TARGETS:
-        return {"biomarkers", "pathways", "drug_targets", "literature"}
+        return {"biomarkers", "literature"}
     if mode == ResearchMode.LITERATURE:
         return {"literature"}
 
@@ -217,20 +197,20 @@ def select_agents(research_query: ResearchQuery) -> set[str]:
     if any(term in query_text for term in ("biomarker", "marker", "diagnostic", "test")):
         selected.add("biomarkers")
     if any(term in query_text for term in ("pathway", "signaling", "mechanism", "cascade")):
-        selected.add("pathways")
+        selected.add("literature")
     if any(term in query_text for term in ("drug", "target", "therapy", "treatment", "inhibitor")):
-        selected.update({"biomarkers", "pathways", "drug_targets"})
+        selected.update({"biomarkers", "literature"})
     if any(term in query_text for term in ("literature", "studies", "evidence", "research")):
         selected.add("literature")
     if any(term in query_text for term in ("everything", "comprehensive", "overview", "all about")):
-        selected.update({"literature", "biomarkers", "pathways", "drug_targets"})
+        selected.update({"literature", "biomarkers"})
     if not selected:
-        selected.update({"literature", "biomarkers", "pathways"})
+        selected.update({"literature", "biomarkers"})
     return selected
 
 
 def ordered_agents(selected: set[str]) -> list[str]:
-    order = ["literature", "biomarkers", "pathways", "drug_targets"]
+    order = ["literature", "biomarkers"]
     return [agent for agent in order if agent in selected]
 
 

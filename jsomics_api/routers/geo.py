@@ -65,6 +65,7 @@ async def geo_fetch(
         "platform": dataset.platform,
         "sample_count": dataset.sample_count,
         "matrix_type": dataset.matrix_type,
+        "matrix_type_info": dataset.matrix_type_info,
         "samples": [
             {
                 "id": s.sample_id,
@@ -232,6 +233,7 @@ async def geo_analyse(
             "title": dataset.title,
             "organism": dataset.organism,
             "matrix_type": dataset.matrix_type,
+            "matrix_type_info": dataset.matrix_type_info,
             "sample_count": dataset.sample_count,
             "case_samples": case_samples,
             "control_samples": control_samples,

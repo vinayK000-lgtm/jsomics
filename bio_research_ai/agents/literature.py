@@ -3,12 +3,16 @@ from __future__ import annotations
 import re
 
 from bio_research_ai.agents.biomarker import extract_gene_symbols, split_sentences
-from bio_research_ai.agents.pathway import extract_pathway_mentions
 from bio_research_ai.models import Evidence, IngestionRecord, KnowledgeGraphTriple, LiteratureFinding
 
 
 DRUG_PATTERN = re.compile(
     r"\b([A-Z]?[a-z]+(?:mab|nib|asib|parib|ciclib|limus|tinib|statin|platin|zumab))\b"
+)
+
+PATHWAY_PATTERN = re.compile(
+    r"\b([A-Za-z0-9 -]*(?:pathway|signaling|signalling|cascade)[A-Za-z0-9 -]*)\b",
+    re.IGNORECASE,
 )
 
 
@@ -83,6 +87,17 @@ def extract_drug_mentions(text: str) -> list[str]:
             continue
         drugs.append(drug)
     return drugs
+
+
+def extract_pathway_mentions(text: str) -> list[str]:
+    """Extract lightweight pathway phrases without the removed pathway agent module."""
+    pathways = []
+    for match in PATHWAY_PATTERN.findall(text):
+        value = " ".join(match.split()).strip(" .,:;")
+        if len(value) < 8 or len(value) > 90:
+            continue
+        pathways.append(value)
+    return pathways
 
 
 def extract_relationships(
