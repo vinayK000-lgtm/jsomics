@@ -103,7 +103,7 @@ def _query_mygene(
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=20) as r:
+        with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
 
         for hit in data:

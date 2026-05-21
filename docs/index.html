@@ -130,7 +130,7 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
         <button class="btn btn-primary" onclick="showPage('signupPage')"><span data-i18n="create_account">Create account</span> →</button>
         <button class="btn btn-ghost" onclick="showPage('loginPage')" data-i18n="sign_in">Sign in</button>
       </div>
-      <div class="terminal-pill"><span class="term-green">POST</span> jsomics.com/v1/research</div>
+      <div class="terminal-pill"><span class="term-green">POST</span> api.jsomics.com/v1/research</div>
     </div>
     <div class="dna-panel glass glow" aria-hidden="true">
       <svg class="dna-svg" viewBox="0 0 260 520" fill="none">
@@ -147,8 +147,10 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
   <section class="section" id="features">
     <div class="kicker">Research modalities</div>
     <div class="feature-grid">
-      <div class="feature-card glass"><div class="icon">🧬</div><h3 data-i18n="biomarkers">Biomarkers</h3><p>Gene, protein and molecular marker prioritisation with confidence scoring.</p></div>
-      <div class="feature-card glass"><div class="icon">📚</div><h3 data-i18n="literature">Literature</h3><p>Evidence synthesis from abstracts, relationships, citations and source links.</p></div>
+      <div class="feature-card glass"><div class="icon"></div><h3 data-i18n="biomarkers">Biomarkers</h3><p>Gene, protein and molecular marker prioritisation with confidence scoring.</p></div>
+      <div class="feature-card glass"><div class="icon"></div><h3 data-i18n="literature">Literature</h3><p>Evidence synthesis from abstracts, relationships, citations and source links.</p></div>
+      <div class="feature-card glass"><div class="icon"></div><h3>GEO DEG Analysis</h3><p>Upload or fetch GEO mRNA-seq datasets. Automatic data-type detection selects the correct statistical method - DESeq2 for raw counts, limma for normalised data.</p></div>
+      <div class="feature-card glass"><div class="icon"></div><h3>QC and Validation</h3><p>Automatic QC checks - sample count, missing values, PCA separation, library size variation - before every analysis with transparent warnings.</p></div>
     </div>
     <div class="stats-bar">
       <div class="stat-card glass"><div class="big-num">Live</div><div class="label">PubMed fetch</div></div>
@@ -377,7 +379,7 @@ function useQuery(el) {
 }
 function setJobStatus(text){const el=document.getElementById('jobStatusLine');if(el)el.textContent=text}
 function setRunning(on){document.getElementById('runBtn').disabled=on;document.getElementById('stopBtn').style.display=on?'inline-flex':'none'}
-async function pollJob(jobId){clearInterval(jobPollTimer);jobPollTimer=setInterval(async()=>{try{const s=await apiFetch(`/v1/jobs/${jobId}/status`);const agents=s.agents||{};const agentText=Object.entries(agents).filter(([k])=>String(k).toLowerCase()!=='pubchem').map(([k,v])=>`${k}:${v}`).join(' - ');setJobStatus(`${s.status} · ${s.progress||0}% · ${s.message||''}${agentText?' · '+agentText:''}`);if(['done','error','cancelled'].includes(s.status))clearInterval(jobPollTimer)}catch{}},1200)}
+async function pollJob(jobId){clearInterval(jobPollTimer);jobPollTimer=setInterval(async()=>{try{const s=await apiFetch(`/v1/jobs/${jobId}/status`);const agents=s.agents||{};const agentText=Object.entries(agents).map(([k,v])=>`${k}:${v}`).join(' - ');setJobStatus(`${s.status} · ${s.progress||0}% · ${s.message||''}${agentText?' · '+agentText:''}`);if(['done','error','cancelled'].includes(s.status))clearInterval(jobPollTimer)}catch{}},1200)}
 async function runQuery(){const q=document.getElementById('queryInput').value.trim(); if(q.length<3)return;if(currentResearchController)return;setLoading(true);document.getElementById('resultsArea').classList.remove('show');setRunning(true);const start=performance.now();currentResearchController=new AbortController();try{const payload={query:q,disease:null,mode:document.getElementById('modeSelect').value,evidence_level:document.getElementById('evidenceLevel').value,max_results:Number(document.getElementById('resultCount').value),inline_evidence:[],omics:selectedOmics()};setJobStatus('running direct multiomics analysis...');const data=await apiFetch('/v1/research',{method:'POST',body:JSON.stringify(payload),signal:currentResearchController.signal});renderResults(data,Math.round(performance.now()-start));rememberQuery(q);setJobStatus('complete · PubMed / KEGG / AI synthesis ready');}catch(e){if(e.name==='AbortError'){setJobStatus('stopped locally');renderError('Search stopped.')}else{renderError(e.message);setJobStatus('error · '+e.message)}}finally{clearInterval(jobPollTimer);setLoading(false);setRunning(false);currentResearchController=null;currentJobId=null;await loadProfile();await refreshHistory();}}
 async function stopQuery(){if(currentResearchController){currentResearchController.abort();setJobStatus('stop requested')}}
 function score(v){return Math.max(0,Math.min(100,Math.round((Number(v)||0)*100)))}
@@ -394,8 +396,8 @@ function renderResults(data,took){
   document.getElementById('timeTaken').textContent=(data.provenance?.took_ms||took)+' ms';
   const p=data.provenance||{};
   const agentStatus=p.agent_status||{};
-  const agentEntries=Object.entries(agentStatus).filter(([a])=>String(a).toLowerCase()!=='pubchem');
-  const invoked=(data.agents_invoked||[]).filter(a=>String(a).toLowerCase()!=='pubchem');
+  const agentEntries=Object.entries(agentStatus);
+  const invoked=(data.agents_invoked||[]);
   const agentHtml=(agentEntries.length?agentEntries.map(([a,s])=>`<span class="badge">${esc(a)}:${esc(s)}</span>`):invoked.map(a=>`<span class="badge">${esc(a)}</span>`)).join('');
   document.getElementById('agentsRan').innerHTML=agentHtml+(p.llm_enabled?'<span class="badge">LLM:'+esc(p.llm_provider||'enabled')+'</span>':'<span class="badge">LLM:not configured</span>')||'<span class="badge">orchestrator</span>';
   document.getElementById('aiInsight').textContent=data.executive_summary||data.answer||'No AI insight returned.';
@@ -484,7 +486,7 @@ function renderHistory(items=localHistory()){
         <span style="color:var(--muted)">
           ${x.created_at ? new Date(x.created_at).toLocaleString() :
             new Date(x.at||Date.now()).toLocaleString()}
-          - ${esc((x.modalities||[]).join?.(', ')||x.source||'local')}
+          - ${esc((x.modalities||[]).filter(m => !['pathways','drug_targets','pubchem'].includes(m)).join(', ') || x.source || 'local')}
         </span>
       </button>
       <button onclick="deleteHistoryItem(${i})"

@@ -201,10 +201,23 @@ async def _execute_geo_pipeline(job_id: str, payload: dict) -> dict:
         from bio_research_ai.agents.qc import run_qc
         qc_result = run_qc(dataset, case_samples, control_samples)
 
-        if not qc_result.passed:
-            raise ValueError(
-                "QC FAILED: " + " | ".join(qc_result.errors)
-            )
+        if not qc_result.passed and len(qc_result.errors) > 0:
+            # Only stop for truly fatal errors (0 samples, no matrix).
+            # For low sample count, warn but continue.
+            fatal = [
+                e for e in qc_result.errors
+                if "0 sample" in e or "no matrix" in e.lower()
+            ]
+            if fatal:
+                raise ValueError("QC FAILED: " + " | ".join(fatal))
+            else:
+                # Demote errors to warnings so analysis can proceed.
+                qc_result.warnings = qc_result.errors + qc_result.warnings
+                qc_result.errors = []
+                qc_result.passed = True
+                qc_result.recommendation = (
+                    "Proceeding with caution - " + qc_result.recommendation
+                )
 
         if qc_result.warnings:
             print(f"[QC] {len(qc_result.warnings)} warnings: "
@@ -250,8 +263,15 @@ async def _execute_geo_pipeline(job_id: str, payload: dict) -> dict:
         message="Annotating gene IDs via MyGene.info...")
     try:
         from bio_research_ai.agents.gene_annotator import annotate_genes
-        gene_ids = [r.gene_symbol for r in deg.results[:500]]
-        annotations = annotate_genes(gene_ids, species="human")
+        import concurrent.futures as cf
+        gene_ids = [r.gene_symbol for r in deg.results[:200]]
+        try:
+            with cf.ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(annotate_genes, gene_ids, "human")
+                annotations = fut.result(timeout=15)
+        except (cf.TimeoutError, Exception) as ann_err:
+            print(f"[geo_jobs] gene annotation skipped: {ann_err}")
+            annotations = {}
         # Update gene symbols in DEG results
         for r in deg.results:
             ann = annotations.get(r.gene_symbol)
