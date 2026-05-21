@@ -8,6 +8,8 @@ __pycache__/
 *.egg-info/
 .eggs/
 jsomics.egg-info/
+api/index.py
+vercel.json
 dist/
 build/
 .DS_Store

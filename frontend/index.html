@@ -49,9 +49,9 @@ a{color:inherit;text-decoration:none}button,input,select{font:inherit}button{cur
 .hero{min-height:100vh;display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,520px);align-items:center;gap:48px;padding:120px clamp(18px,6vw,86px) 70px}.kicker{font-family:var(--mono);color:var(--cyan);font-size:12px;letter-spacing:.18em;text-transform:uppercase;display:flex;align-items:center;gap:10px}.kicker:before{content:"";width:34px;height:1px;background:linear-gradient(90deg,var(--cyan),transparent)}
 h1{font-size:clamp(48px,8vw,104px);line-height:.92;margin:18px 0 18px;letter-spacing:-.07em}.gradient{background:linear-gradient(90deg,var(--cyan),var(--blue),#dbeafe);-webkit-background-clip:text;background-clip:text;color:transparent}.hero p{max-width:680px;color:var(--muted);font-size:18px;line-height:1.75}.hero-ctas{display:flex;gap:12px;flex-wrap:wrap;margin:30px 0}.terminal-pill{display:inline-flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(8,15,30,.66);color:var(--muted);font-family:var(--mono);font-size:13px}.term-green{color:var(--cyan)}
 .dna-panel{position:relative;min-height:560px;display:grid;place-items:center;overflow:hidden}.dna-panel:before{content:"";position:absolute;inset:18px;border:1px solid rgba(0,212,170,.12);border-radius:28px;background:radial-gradient(circle,rgba(0,212,170,.12),transparent 62%)}.dna-svg{width:86%;max-width:390px;filter:drop-shadow(0 0 28px rgba(0,212,170,.32))}.helix-line{stroke-dasharray:7 9;animation:dash 5s linear infinite}.rung{transform-origin:center;animation:pulseRung 2.8s ease-in-out infinite}.rung:nth-child(odd){animation-delay:.2s}@keyframes dash{to{stroke-dashoffset:-180}}@keyframes pulseRung{50%{opacity:.4;transform:scaleX(.92)}}
-.section{padding:34px clamp(18px,6vw,86px)}.feature-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:18px}.feature-card{padding:22px;min-height:172px}.icon{font-size:28px;margin-bottom:14px}.feature-card h3,.stat-card h3{margin:0 0 8px}.feature-card p,.stat-card p{color:var(--muted);line-height:1.65;margin:0}.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:22px}.big-num{font-family:var(--mono);font-size:28px;color:var(--cyan);font-weight:700}.label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.section{padding:34px clamp(18px,6vw,86px)}.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}.feature-card{padding:22px;min-height:172px}.icon{font-size:28px;margin-bottom:14px}.feature-card h3,.stat-card h3{margin:0 0 8px}.feature-card p,.stat-card p{color:var(--muted);line-height:1.65;margin:0}.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:22px}.big-num{font-family:var(--mono);font-size:28px;color:var(--cyan);font-weight:700}.label{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .auth-shell{min-height:100vh;display:grid;place-items:center;padding:94px 18px 42px}.auth-card{width:min(100%,460px);padding:28px}.auth-title{font-size:28px;margin:14px 0 4px;letter-spacing:-.04em}.auth-sub{color:var(--muted);margin:0 0 22px}.oauth{width:100%;justify-content:center;background:linear-gradient(135deg,rgba(0,212,170,.16),rgba(14,165,233,.14));border:1px solid var(--line2);color:var(--text)}.divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-family:var(--mono);font-size:12px;margin:18px 0}.divider:before,.divider:after{content:"";height:1px;background:var(--line);flex:1}.field{margin:14px 0}.field label{display:flex;justify-content:space-between;color:var(--muted);font-family:var(--mono);font-size:12px;margin-bottom:8px}.input-wrap{position:relative}.field input,.query-input{width:100%;background:rgba(4,11,22,.78);border:1px solid var(--line);color:var(--text);outline:none;border-radius:15px;padding:14px 44px 14px 14px;font-family:var(--mono);transition:.18s}.field input:focus,.query-input:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(0,212,170,.08)}.eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);border:0;background:transparent;color:var(--muted);padding:8px}.link{color:var(--cyan);font-weight:700;background:none;border:0;padding:0}.auth-row{display:flex;justify-content:space-between;align-items:center;margin-top:10px;color:var(--muted);font-size:13px}.msg{display:none;margin:12px 0;padding:12px 14px;border-radius:14px;font-family:var(--mono);font-size:12px}.msg.show{display:block}.msg.error{background:rgba(251,113,133,.1);border:1px solid rgba(251,113,133,.25);color:#fecdd3}.msg.ok{background:rgba(0,212,170,.09);border:1px solid var(--line2);color:var(--cyan2)}.strength{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.strength span{height:5px;background:rgba(148,163,184,.16);border-radius:999px}.strength.s1 span:nth-child(1),.strength.s2 span:nth-child(-n+2),.strength.s3 span:nth-child(-n+3),.strength.s4 span:nth-child(-n+4){background:linear-gradient(90deg,var(--cyan),var(--blue))}.match{font-family:var(--mono);font-size:12px;margin-top:7px;color:var(--muted)}.match.ok{color:var(--cyan)}.match.bad{color:var(--danger)}
-.dashboard{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}.sidebar{height:100vh;position:sticky;top:0;padding:22px 16px;display:flex;flex-direction:column;border-right:1px solid var(--line);background:rgba(5,10,20,.86);backdrop-filter:blur(18px)}.side-nav{margin-top:30px;display:grid;gap:6px}.side-link{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;color:var(--muted);border:1px solid transparent;background:none;text-align:left}.side-link.active,.side-link:hover{color:var(--cyan);background:rgba(0,212,170,.07);border-color:rgba(0,212,170,.14)}.side-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:16px}.user-email{font-family:var(--mono);font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis}.plan-badge,.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:rgba(0,212,170,.09);border:1px solid var(--line2);font-family:var(--mono);font-size:11px;color:var(--cyan);margin-top:8px}.main{padding:22px clamp(16px,3vw,34px) 42px}.main-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.page-title{font-size:30px;font-weight:800;letter-spacing:-.04em}.top-tools{display:flex;align-items:center;gap:10px}.bell{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;border:1px solid var(--line);background:rgba(8,15,30,.62);position:relative}.bell:after{content:"";position:absolute;right:10px;top:10px;width:7px;height:7px;background:var(--cyan);border-radius:50%;box-shadow:0 0 12px var(--cyan)}.verify-banner{display:none;margin-bottom:16px;padding:14px 16px;border-radius:18px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.22);color:#fde68a}.verify-banner.show{display:flex;justify-content:space-between;gap:14px;align-items:center}.dash-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:16px}.stat-card{padding:18px;position:relative}.tooltip{position:relative}.tooltip:hover:after{content:attr(data-tip);position:absolute;left:16px;top:56px;z-index:3;width:230px;background:#020617;border:1px solid var(--line2);color:var(--text);border-radius:12px;padding:10px;font-family:var(--mono);font-size:11px;line-height:1.5}.progress{height:8px;background:rgba(148,163,184,.15);border-radius:999px;overflow:hidden;margin-top:12px}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px;transition:width .7s ease}.query-panel{padding:20px;margin-bottom:16px}.terminal-row{display:flex;align-items:center;border:1px solid var(--line);background:rgba(1,8,18,.82);border-radius:18px;overflow:hidden}.prefix{font-family:var(--mono);color:var(--cyan);padding:0 0 0 16px;white-space:nowrap}.terminal-row .query-input{border:0;border-radius:0;background:transparent;box-shadow:none;padding-right:14px}.selectors{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.selectors select{background:rgba(4,11,22,.78);border:1px solid var(--line);color:var(--text);border-radius:13px;padding:11px 12px;font-family:var(--mono);font-size:12px}.run{margin-left:auto}.kbd{font-family:var(--mono);font-size:10px;color:#00313b;background:rgba(255,255,255,.55);padding:2px 5px;border-radius:6px}.loading{display:none;padding:28px;text-align:center;margin-bottom:16px}.loading.show{display:block}.dna-spinner{width:88px;height:88px;margin:0 auto 12px;filter:drop-shadow(0 0 18px rgba(0,212,170,.3))}.dna-spinner .spin{transform-origin:center;animation:spin 1.8s linear infinite}.load-text{font-family:var(--mono);color:var(--muted)}
+.dashboard{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:100vh}.sidebar{height:100vh;position:sticky;top:0;padding:22px 16px;display:flex;flex-direction:column;border-right:1px solid var(--line);background:rgba(5,10,20,.86);backdrop-filter:blur(18px)}.side-nav{margin-top:30px;display:grid;gap:6px}.side-link{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;color:var(--muted);border:1px solid transparent;background:none;text-align:left}.side-link.active,.side-link:hover{color:var(--cyan);background:rgba(0,212,170,.07);border-color:rgba(0,212,170,.14)}.side-bottom{margin-top:auto;border-top:1px solid var(--line);padding-top:16px}.user-email{font-family:var(--mono);font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis}.plan-badge,.badge{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:rgba(0,212,170,.09);border:1px solid var(--line2);font-family:var(--mono);font-size:11px;color:var(--cyan);margin-top:8px}.main{padding:22px clamp(16px,3vw,34px) 42px}.main-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px}.page-title{font-size:30px;font-weight:800;letter-spacing:-.04em}.top-tools{display:flex;align-items:center;gap:10px}.verify-banner{display:none;margin-bottom:16px;padding:14px 16px;border-radius:18px;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.22);color:#fde68a}.verify-banner.show{display:flex;justify-content:space-between;gap:14px;align-items:center}.dash-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:16px}.stat-card{padding:18px;position:relative}.tooltip{position:relative}.tooltip:hover:after{content:attr(data-tip);position:absolute;left:16px;top:56px;z-index:3;width:230px;background:#020617;border:1px solid var(--line2);color:var(--text);border-radius:12px;padding:10px;font-family:var(--mono);font-size:11px;line-height:1.5}.progress{height:8px;background:rgba(148,163,184,.15);border-radius:999px;overflow:hidden;margin-top:12px}.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px;transition:width .7s ease}.query-panel{padding:20px;margin-bottom:16px}.terminal-row{display:flex;align-items:center;border:1px solid var(--line);background:rgba(1,8,18,.82);border-radius:18px;overflow:hidden}.prefix{font-family:var(--mono);color:var(--cyan);padding:0 0 0 16px;white-space:nowrap}.terminal-row .query-input{border:0;border-radius:0;background:transparent;box-shadow:none;padding-right:14px}.selectors{display:flex;gap:10px;flex-wrap:wrap;margin-top:13px}.selectors select{background:rgba(4,11,22,.78);border:1px solid var(--line);color:var(--text);border-radius:13px;padding:11px 12px;font-family:var(--mono);font-size:12px}.run{margin-left:auto}.kbd{font-family:var(--mono);font-size:10px;color:#00313b;background:rgba(255,255,255,.55);padding:2px 5px;border-radius:6px}.loading{display:none;padding:28px;text-align:center;margin-bottom:16px}.loading.show{display:block}.dna-spinner{width:88px;height:88px;margin:0 auto 12px;filter:drop-shadow(0 0 18px rgba(0,212,170,.3))}.dna-spinner .spin{transform-origin:center;animation:spin 1.8s linear infinite}.load-text{font-family:var(--mono);color:var(--muted)}
 .results{display:none}.results.show{display:block}.agent-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:14px 16px;margin-bottom:14px}.agent-pills{display:flex;gap:8px;flex-wrap:wrap}.ai-box{border-left:4px solid var(--cyan);padding:18px;margin-bottom:14px;background:rgba(0,212,170,.06)}.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px;margin-bottom:12px}.tab{white-space:nowrap;border:1px solid var(--line);background:rgba(8,15,30,.55);color:var(--muted);border-radius:13px;padding:10px 12px;font-family:var(--mono);font-size:12px}.tab.active{color:var(--cyan);border-color:var(--line2);background:rgba(0,212,170,.08)}.tab-content{display:none}.tab-content.active{display:block}.cards{display:grid;gap:12px}.result-card{padding:16px}.card-head{display:flex;justify-content:space-between;gap:10px}.card-title{font-weight:800}.card-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:6px}.confidence{height:8px;background:rgba(148,163,184,.14);border-radius:999px;margin:12px 0;overflow:hidden}.confidence span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px;transition:width 900ms ease}.source-link{font-family:var(--mono);font-size:11px;color:var(--blue)}.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.chip{border:1px solid var(--line2);background:rgba(0,212,170,.06);color:var(--cyan);border-radius:999px;padding:8px 10px;font-family:var(--mono);font-size:11px}.empty{padding:22px;text-align:center;color:var(--muted);font-family:var(--mono)}.toast{position:fixed;right:18px;bottom:18px;z-index:50;display:none;width:min(360px,calc(100vw - 36px));padding:16px}.toast.show{display:block}.toast-actions{display:flex;gap:8px;margin-top:12px}.settings-panel,.history-panel,.ingest-panel,.geo-panel{display:none;padding:20px}.settings-panel.active,.history-panel.active,.ingest-panel.active,.geo-panel.active{display:block}.dash-section { display: none; }.dash-section.active { display: block; }.info-box{background:rgba(0,212,170,0.06);border:1px solid rgba(0,212,170,0.2);border-radius:8px;padding:1.5rem;font-family:var(--mono,monospace);font-size:0.82rem;color:var(--muted,#64748b);text-align:center;margin:2rem 0}.geo-progress{display:none;margin-top:14px}.geo-progress.show{display:block}.geo-progress .bar{height:8px;background:rgba(148,163,184,.15);border-radius:999px;overflow:hidden;margin-top:10px}.geo-progress .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--blue));border-radius:999px;transition:width .5s ease}.geo-card.selected{border-color:var(--cyan,#00d4aa)!important;background:rgba(0,212,170,0.06)!important}.mobile-tabs{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--bg2);border-top:1px solid var(--border,var(--line));z-index:50}.mobile-tabs button{flex:1;padding:0.75rem 0.5rem;font-size:0.65rem;background:none;border:none;color:var(--muted);font-family:var(--mono)}.history-list{display:grid;gap:10px}.history-item{padding:12px;border-radius:14px;border:1px solid var(--line);background:rgba(8,15,30,.48);font-family:var(--mono);font-size:12px;color:var(--muted)}.tool-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.tool-card{padding:18px}.tool-card h2{margin:0 0 12px;font-size:22px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.full{grid-column:1/-1}.field textarea{width:100%;min-height:86px;resize:vertical;background:rgba(4,11,22,.78);border:1px solid var(--line);color:var(--text);outline:none;border-radius:15px;padding:14px;font-family:var(--mono)}.field textarea:focus{border-color:var(--cyan);box-shadow:0 0 0 4px rgba(0,212,170,.08)}.mini-table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px;margin-top:12px}.mini-table th,.mini-table td{padding:10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}.mini-table th{color:var(--cyan);font-weight:600}.sample-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}.sample-chip{border:1px solid var(--line);background:rgba(8,15,30,.52);border-radius:12px;padding:9px;color:var(--muted);font-family:var(--mono);font-size:11px;min-width:0}.sample-chip strong{display:block;color:var(--text);overflow:hidden;text-overflow:ellipsis}.status-line{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:12px}.geo-results{margin-top:14px;display:grid;gap:12px}.hypothesis-list{margin:10px 0 0;padding-left:18px;color:var(--muted);line-height:1.6}
 
 /* Clean light theme overrides */
@@ -96,7 +96,7 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
 .feature-icon, .icon { color: var(--cyan); }
 .mobile-tabs { background: #ffffff; border-top: 1px solid var(--border); }
 .dna-panel:before { background: rgba(2,132,199,0.06); border-color: var(--border2); }
-.terminal-pill, .terminal-row, .history-item, .sample-chip, .bell { background: #ffffff; border: 1px solid var(--border); color: var(--muted); }
+.terminal-pill, .terminal-row, .history-item, .sample-chip { background: #ffffff; border: 1px solid var(--border); color: var(--muted); }
 .kbd { color: var(--cyan); background: rgba(2,132,199,0.08); }
 .msg.error { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); }
 .msg.ok, .chip, .badge, .plan-badge { background: rgba(2,132,199,0.08); border: 1px solid var(--border2); color: var(--cyan); }
@@ -148,8 +148,6 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
     <div class="kicker">Research modalities</div>
     <div class="feature-grid">
       <div class="feature-card glass"><div class="icon">🧬</div><h3 data-i18n="biomarkers">Biomarkers</h3><p>Gene, protein and molecular marker prioritisation with confidence scoring.</p></div>
-      <div class="feature-card glass"><div class="icon">🕸️</div><h3 data-i18n="pathways">Pathways</h3><p>Pathway enrichment, mechanism mapping and disease-context interpretation.</p></div>
-      <div class="feature-card glass"><div class="icon">🎯</div><h3 data-i18n="drug_targets">Drug Targets</h3><p>Target ranking across biology, genetics, druggability and clinical rationale.</p></div>
       <div class="feature-card glass"><div class="icon">📚</div><h3 data-i18n="literature">Literature</h3><p>Evidence synthesis from abstracts, relationships, citations and source links.</p></div>
     </div>
     <div class="stats-bar">
@@ -190,10 +188,10 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
 <section id="dashboardPage" class="page"><div class="dashboard">
   <aside class="sidebar"><div class="logo"><span class="logo-mark">J</span><span>JS</span><span>OMICS</span></div><nav class="side-nav"><button class="side-link active" onclick="dashTab('researchSection',this)">🔬 <span data-i18n="research">Research</span></button><button class="side-link" onclick="dashTab('geoSection',this)">&#x1F9EC; <span>GEO / DEG</span></button><button class="side-link" onclick="dashTab('historySection',this)">🕘 <span>Query History</span></button><button class="side-link" onclick="dashTab('settingsSection',this)">⚙️ <span>Settings</span></button></nav><div class="side-bottom"><div class="user-email" id="sidebarEmail">—</div><div class="plan-badge" id="sidebarPlan">free</div><button class="btn btn-danger btn-small" style="width:100%;justify-content:center;margin-top:12px" onclick="signOut()" data-i18n="sign_out">Sign out</button></div></aside>
   <main class="main">
-    <div class="main-top"><div><div class="page-title" data-i18n="dashboard">Dashboard</div><div class="label">Live evidence · temporary cache · Supabase auth</div></div><div class="top-tools"><select class="lang" id="dashLang" onchange="setLang(this.value)"></select><div class="bell">🔔</div></div></div>
+    <div class="main-top"><div><div class="page-title" data-i18n="dashboard">Dashboard</div></div><div class="top-tools"><select class="lang" id="dashLang" onchange="setLang(this.value)"></select></div></div>
     <div id="emailVerifyBanner" class="verify-banner"><div><strong>Email verification pending.</strong><div class="mono" style="font-size:12px;color:#facc15">Some features may be limited until your email is verified.</div></div><button class="btn btn-ghost btn-small" onclick="resendVerification()">Resend</button></div>
     <section id="researchSection" class="dash-section active">
-      <div class="dash-stats"><div class="stat-card glass tooltip" data-tip="Temporary live evidence from PubMed and KEGG. Permanent Supabase evidence storage is not required."><div class="label" data-i18n="evidence_records">Evidence records</div><div class="big-num" id="evidenceCount">0</div><p id="sourceBreakdown">PubMed 0 · KEGG 0</p></div><div class="stat-card glass"><div class="label" data-i18n="plan">Plan</div><div class="big-num" id="planValue">free</div></div><div class="stat-card glass"><div class="label" data-i18n="api_calls">API calls</div><div class="big-num"><span id="apiCalls">0</span>/<span id="apiLimit">10</span></div><div class="progress"><span id="apiProgress"></span></div></div><div class="stat-card glass"><div class="label">Cache hit rate</div><div class="big-num" id="cacheHitRate">0%</div></div></div>
+      <div class="dash-stats"><div class="stat-card glass tooltip" data-tip="Live evidence from PubMed and KEGG."><div class="label" data-i18n="evidence_records">Evidence records</div><div class="big-num" id="evidenceCount">0</div><p id="sourceBreakdown">PubMed 0 - KEGG 0</p></div><div class="stat-card glass"><div class="label" data-i18n="plan">Plan</div><div class="big-num" id="planValue">free</div></div></div>
       <div class="query-panel glass glow"><div class="terminal-row"><span class="prefix">$ jsomics query --multiomics</span><input id="queryInput" class="query-input" data-i18n-placeholder="query_placeholder" placeholder="Ask anything - e.g. What are the key biomarkers in lung cancer?" onkeydown="if(event.key==='Enter') runQuery()"></div><div id="querySuggestions" style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.6rem;">
         <span class="chip" style="cursor:pointer" onclick="useQuery(this)">BRCA1 breast cancer biomarkers</span>
         <span class="chip" style="cursor:pointer" onclick="useQuery(this)">EGFR lung cancer drug targets</span>
@@ -230,7 +228,7 @@ nav, .topnav { background: rgba(255,255,255,0.95); border-bottom: 1px solid var(
             <div class="form-grid">
               <div class="field full"><label>Find datasets</label><div class="terminal-row"><input id="geoSearch" class="query-input" type="text" placeholder="cancer RNA-seq"><button class="btn btn-ghost" onclick="searchGeoDatasets()">Search GEO</button></div></div>
               <div class="field"><label>GEO accession</label><input id="geoAccession" type="text" placeholder="GSE12345" value=""></div>
-              <div class="field"><label>Disease / condition</label><input id="geoDisease" type="text" placeholder="osteoarthritis"></div>
+              <div class="field"><label>Disease / condition</label><input id="geoDisease" type="text" placeholder="e.g. lung cancer, breast cancer, Alzheimer"></div>
               <div class="field full"><label>Case sample IDs</label><textarea id="geoCaseSamples" placeholder="GSM... comma or newline separated"></textarea></div>
               <div class="field full"><label>Control sample IDs</label><textarea id="geoControlSamples" placeholder="GSM... comma or newline separated"></textarea></div>
               <div class="field"><label>Adjusted p-value</label><input id="geoPadj" type="number" min="0.001" max="1" step="0.001" value="0.1"></div>
@@ -348,41 +346,29 @@ async function resendVerification(){if(!supabaseClient){msg('verifyMsg','error',
 function startResendCooldown(){const btn=document.getElementById('verifyResendBtn');if(!btn)return;const tick=()=>{const left=Math.max(0,Math.ceil((resendUntil-Date.now())/1000));btn.disabled=left>0;btn.textContent=left>0?`Resend in ${left}s`:'Resend verification email';if(left>0)setTimeout(tick,1000)};tick();}
 async function apiFetch(path,opts={}){const token=(await supabaseClient?.auth.getSession())?.data?.session?.access_token;const headers={'Content-Type':'application/json',...(opts.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;const res=await fetch(API+path,{...opts,headers});if(!res.ok){let detail=`Request failed (${res.status})`;try{const body=await res.json();detail=typeof body.detail==='string'?body.detail:(body.message||body.error||JSON.stringify(body.detail||body))}catch{}throw new Error(detail)}return res.json();}
 async function enterDashboard(){showPage('dashboardPage');startIdleTimer();await loadProfile();await refreshHistory();updateSettings();}
-async function loadProfile(){try{userProfile=await apiFetch('/v1/users/me');}catch{const s=(await supabaseClient?.auth.getSession())?.data?.session;userProfile={email:s?.user?.email||currentUser?.email||'user',plan:'free',api_calls_today:0,daily_limit:10};}document.getElementById('sidebarEmail').textContent=userProfile.email||'—';document.getElementById('sidebarPlan').textContent=userProfile.plan||'free';document.getElementById('planValue').textContent=userProfile.plan||'free';document.getElementById('apiCalls').textContent=userProfile.api_calls_today||0;document.getElementById('apiLimit').textContent=userProfile.daily_limit||10;document.getElementById('apiProgress').style.width=Math.min(100,((userProfile.api_calls_today||0)/(userProfile.daily_limit||10))*100)+'%';const u=(await supabaseClient?.auth.getUser())?.data?.user;if(u&&u.email_confirmed_at===null)document.getElementById('emailVerifyBanner').classList.add('show');}
-async function signOut(){try{await supabaseClient?.auth.signOut()}catch{}currentUser=null;showPage('landingPage');stopIdleTimer();}
-function dashTab(section, btn) {
-  document.querySelectorAll('.dash-section').forEach(s => s.classList.remove('active'));
-  document.getElementById(section)?.classList.add('active');
-  document.querySelectorAll('.side-link').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-  if (section === 'historySection') refreshHistory();
-  if (section === 'settingsSection') updateSettings();
-  if (section === 'geoSection') initGeoSection();
-}
-function initGeoSection() {
-  const box = document.getElementById('geoDatasetBox');
-  if (box && !box.innerHTML.trim()) {
-    box.innerHTML = '<div class="info-box">Enter a GEO accession number above or search by disease keyword to load a dataset.</div>';
+async function loadProfile(){
+  try{
+    userProfile=await apiFetch('/v1/users/me');
+  }catch{
+    const s=(await supabaseClient?.auth.getSession())?.data?.session;
+    userProfile={email:s?.user?.email||currentUser?.email||'user',plan:'free',api_calls_today:0,daily_limit:10};
   }
-  const results = document.getElementById('geoResults');
-  if (results && !results.innerHTML.trim()) {
-    results.innerHTML = '<div class="info-box">Results will appear here after running DEG + AI analysis.</div>';
-  }
-  const searchResults = document.getElementById('geoSearchResults');
-  if (searchResults && !searchResults.innerHTML.trim()) {
-    searchResults.innerHTML = '';
-  }
+  const sidebarEmail=document.getElementById('sidebarEmail');
+  const sidebarPlan=document.getElementById('sidebarPlan');
+  const planValue=document.getElementById('planValue');
+  if(sidebarEmail)sidebarEmail.textContent=userProfile.email||'?';
+  if(sidebarPlan)sidebarPlan.textContent=userProfile.plan||'free';
+  if(planValue)planValue.textContent=userProfile.plan||'free';
+  const apiCalls=document.getElementById('apiCalls');
+  const apiLimit=document.getElementById('apiLimit');
+  const apiProgress=document.getElementById('apiProgress');
+  if(apiCalls)apiCalls.textContent=userProfile.api_calls_today||0;
+  if(apiLimit)apiLimit.textContent=userProfile.daily_limit||10;
+  if(apiProgress)apiProgress.style.width=Math.min(100,((userProfile.api_calls_today||0)/(userProfile.daily_limit||10))*100)+'%';
+  const u=(await supabaseClient?.auth.getUser())?.data?.user;
+  const banner=document.getElementById('emailVerifyBanner');
+  if(u&&u.email_confirmed_at===null&&banner)banner.classList.add('show');
 }
-function switchTab(name) {
-  const tabs = ['findings', 'literature'];
-  document.querySelectorAll('.tab-btn').forEach((b,i) =>
-    b.classList.toggle('active', tabs[i] === name));
-  document.querySelectorAll('.tab-content').forEach(c =>
-    c.classList.remove('active'));
-  document.getElementById('tab-' + name)?.classList.add('active');
-}
-const loadingMessages=['Parsing PubMed abstracts...','Extracting gene symbols...','Scoring drug targets...','Building knowledge graph...','Synthesising findings...'];
-function setLoading(on){const el=document.getElementById('loadingBox'); if(on){let i=0;el.classList.add('show');document.getElementById('loadingText').textContent=loadingMessages[0];loadingCycle=setInterval(()=>{i=(i+1)%loadingMessages.length;document.getElementById('loadingText').textContent=loadingMessages[i]},1400)}else{el.classList.remove('show');clearInterval(loadingCycle)}}
 function selectedOmics(){return [...document.querySelectorAll('.omicsBox:checked')].map(x=>x.value)}
 function useQuery(el) {
   const qi = document.getElementById('query-input') || document.getElementById('queryInput');
@@ -485,11 +471,45 @@ function renderError(message){
 function rememberQuery(q){const list=JSON.parse(localStorage.getItem('jsomics_history')||'[]');list.unshift({q,at:new Date().toISOString(),source:'local'});localStorage.setItem('jsomics_history',JSON.stringify(list.slice(0,25)));renderHistory()}
 function localHistory(){return JSON.parse(localStorage.getItem('jsomics_history')||'[]')}
 function renderHistory(items=localHistory()){
-  document.getElementById('historyList').innerHTML=items.map(x=>`<button class="history-item" onclick="document.getElementById('queryInput').value='${escAttr(x.q||x.query)}';dashTab('researchSection',document.querySelector('.side-link'));runQuery()">${esc(x.q||x.query)}<br><span>${x.created_at?new Date(x.created_at).toLocaleString():new Date(x.at).toLocaleString()} - ${esc((x.modalities||[]).join?.(', ')||x.source||'local')}</span></button>`).join('')||`<div class="info-box">
+  document.getElementById('historyList').innerHTML=items.map((x,i)=>`
+    <div class="history-item" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+      <button style="flex:1;text-align:left;background:none;border:none;
+                     color:var(--text);cursor:pointer;font-family:var(--mono);
+                     font-size:12px;padding:0"
+        onclick="document.getElementById('queryInput').value='${escAttr(x.q||x.query||'')}';
+                 dashTab('researchSection',document.querySelector('.side-link'));
+                 runQuery()">
+        ${esc(x.q||x.query||'Unknown query')}
+        <br>
+        <span style="color:var(--muted)">
+          ${x.created_at ? new Date(x.created_at).toLocaleString() :
+            new Date(x.at||Date.now()).toLocaleString()}
+          - ${esc((x.modalities||[]).join?.(', ')||x.source||'local')}
+        </span>
+      </button>
+      <button onclick="deleteHistoryItem(${i})"
+        style="flex-shrink:0;width:28px;height:28px;border-radius:8px;
+               border:1px solid rgba(239,68,68,0.3);
+               background:rgba(239,68,68,0.06);
+               color:#ef4444;cursor:pointer;font-size:14px;
+               display:grid;place-items:center">
+        &times;
+      </button>
+    </div>`).join('')||`<div class="info-box">
     No query history yet.<br><br>
     Run a research query from the Research tab and your results
     will be saved here automatically.
   </div>`
+}
+function deleteHistoryItem(index) {
+  try {
+    const stored = JSON.parse(localStorage.getItem('jsomics_history') || '[]');
+    stored.splice(index, 1);
+    localStorage.setItem('jsomics_history', JSON.stringify(stored));
+    refreshHistory();
+  } catch(e) {
+    console.error('Delete history error:', e);
+  }
 }
 async function refreshHistory(){const status=document.getElementById('historyStatus');try{const data=await apiFetch('/v1/users/me/history?limit=30');const backend=(data.history||[]).map(x=>({...x,q:x.query,source:'backend'}));const merged=[...backend,...localHistory()].slice(0,30);renderHistory(merged);if(status)status.textContent=`${merged.length} recent queries loaded.`}catch(e){renderHistory();if(status)status.textContent='Showing local browser history because backend history is unavailable.'}}
 async function checkApiStatus(){const label=document.getElementById('settingsApi'),detail=document.getElementById('settingsApiDetail');try{const r=await fetch(API+'/ready');const data=await r.json().catch(()=>({}));label.textContent=r.ok?'Ready':'Degraded';detail.textContent=`database: ${data.database||'unknown'} · evidence records: ${data.evidence_records??'n/a'}`}catch(e){label.textContent='Offline';detail.textContent='API readiness check failed.'}}
@@ -516,24 +536,22 @@ function selectGeoDataset(acc, title) {
   const diseaseEl = document.getElementById('geoDisease');
   const searchEl  = document.getElementById('geoSearch');
   const searchVal = (searchEl?.value || '').trim();
-  // Only use search value as disease if it is NOT an accession number
   const isAccession = /^GSE\d+$/i.test(searchVal);
+  // Auto-fill disease only from keyword searches, not accession searches
   if (diseaseEl && !isAccession && searchVal &&
       (!diseaseEl.value || diseaseEl.value === diseaseEl.dataset.lastAuto)) {
     diseaseEl.value = searchVal;
     diseaseEl.dataset.lastAuto = searchVal;
   }
-  // If disease is empty or still has accession, clear it
+  // Clear disease if it accidentally contains an accession
   if (diseaseEl && /^GSE\d+$/i.test(diseaseEl.value)) {
     diseaseEl.value = '';
-    diseaseEl.placeholder = 'Enter disease name e.g. lung cancer';
   }
-  document.querySelectorAll('.geo-card').forEach(c =>
-    c.classList.remove('selected'));
+  document.querySelectorAll('.geo-card').forEach(c => c.classList.remove('selected'));
   event?.currentTarget?.classList.add('selected');
   const hint = document.getElementById('geoFetchHint');
   if (hint) {
-    hint.textContent = `Selected: ${acc} - click "Fetch samples" to load sample metadata.`;
+    hint.textContent = acc + ' selected - click Fetch samples to load metadata.';
     hint.style.display = 'block';
   }
 }
@@ -584,6 +602,16 @@ async function cancelGeoJob() {
   showGeoError('Analysis cancelled by user.');
 }
 async function runDegAnalysis() {
+  // Warn if dataset is too large
+  if (window._geoDataset && window._geoDataset.sample_count > 100) {
+    const proceed = confirm(
+      'Warning: This dataset has ' + window._geoDataset.sample_count +
+      ' samples. Analysis may take over 2 minutes or time out.\n\n' +
+      'For best results, use datasets with 4-50 samples.\n\n' +
+      'Continue anyway?'
+    );
+    if (!proceed) return;
+  }
   geoCancelRequested = false;
   geoCurrentJobId = null;
   const accession = document.getElementById('geoAccession')?.value.trim();
@@ -695,7 +723,144 @@ async function runDegAnalysis() {
   }
 }
 async function runGeoAnalysis(){return runDegAnalysis()}
-function renderGeoDataset(data){const samples=(data.samples||[]).slice(0,24).map(s=>`<div class="sample-chip"><strong>${esc(s.id)}</strong>${esc(s.title||'')}</div>`).join('');document.getElementById('geoDatasetBox').innerHTML=`<div class="card-title">${esc(data.title||data.accession)}</div><div class="card-meta">${esc(data.organism)} · ${esc(data.platform||'platform n/a')} · ${esc(data.matrix_type)}</div><p style="color:var(--muted);line-height:1.65">${esc(data.summary||'No summary returned.')}</p><div class="sample-list">${samples||'<div class="empty">No samples returned.</div>'}</div>`}
+function renderGeoDataset(data) {
+  const samples = data.samples || [];
+  const sampleHtml = samples.slice(0, 50).map(s => {
+    const sid = s.id || s.sample_id || '';
+    return `
+      <div class="sample-chip" id="chip-${esc(sid)}"
+           data-id="${escAttr(sid)}" data-title="${escAttr(s.title||'')}">
+        <strong>${esc(sid)}</strong>
+        <div style="font-size:10px;color:var(--muted);margin:2px 0;
+                    overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+          ${esc((s.title||'').slice(0,40))}
+        </div>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button onclick="assignSample('${escAttr(sid)}','case')"
+            style="flex:1;font-size:9px;padding:2px 4px;border-radius:6px;
+                   border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);
+                   color:#ef4444;cursor:pointer">
+            + Case
+          </button>
+          <button onclick="assignSample('${escAttr(sid)}','control')"
+            style="flex:1;font-size:9px;padding:2px 4px;border-radius:6px;
+                   border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);
+                   color:#3b82f6;cursor:pointer">
+            + Control
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('geoDatasetBox').innerHTML = `
+      <div style="margin-bottom:12px">
+        <div style="font-weight:700;font-size:0.95rem;margin-bottom:4px">
+          ${esc(data.title || data.accession)}
+        </div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--muted)">
+          ${esc(data.organism)} - ${esc(data.platform||'')} -
+          ${samples.length} samples - type: ${esc(data.matrix_type||'unknown')}
+        </div>
+        <p style="color:var(--muted);font-size:0.82rem;margin-top:6px;line-height:1.5">
+          ${esc((data.summary||'').slice(0,200))}...
+        </p>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button onclick="autoAssignGroups()"
+          style="font-size:11px;padding:5px 10px;border-radius:8px;
+                 border:1px solid var(--cyan);color:var(--cyan);
+                 background:rgba(0,212,170,0.06);cursor:pointer">
+          Auto-detect groups
+        </button>
+        <button onclick="clearAssignments()"
+          style="font-size:11px;padding:5px 10px;border-radius:8px;
+                 border:1px solid var(--border,#e2e8f0);color:var(--muted);
+                 background:transparent;cursor:pointer">
+          Clear all
+        </button>
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--muted);
+                  margin-bottom:8px">
+        Click + Case or + Control on each sample to assign groups:
+      </div>
+      <div class="sample-list">${sampleHtml || '<div class="empty">No samples returned.</div>'}</div>`;
+
+  // Store sample data for auto-detect
+  window._geoSamples = samples;
+  window._geoDataset = data;
+}
+
+// Assign a sample to case or control group
+function assignSample(sampleId, group) {
+  const caseEl = document.getElementById('geoCaseSamples');
+  const ctrlEl = document.getElementById('geoControlSamples');
+  const chip   = document.getElementById('chip-' + sampleId);
+
+  // Remove from both groups first
+  if (caseEl) {
+    caseEl.value = caseEl.value.split('\n')
+      .filter(s => s.trim() !== sampleId).join('\n').trim();
+  }
+  if (ctrlEl) {
+    ctrlEl.value = ctrlEl.value.split('\n')
+      .filter(s => s.trim() !== sampleId).join('\n').trim();
+  }
+
+  // Add to chosen group
+  if (group === 'case' && caseEl) {
+    caseEl.value = [caseEl.value, sampleId].filter(Boolean).join('\n');
+  } else if (group === 'control' && ctrlEl) {
+    ctrlEl.value = [ctrlEl.value, sampleId].filter(Boolean).join('\n');
+  }
+
+  // Visual feedback on chip
+  if (chip) {
+    chip.style.borderColor = group === 'case'
+      ? 'rgba(239,68,68,0.6)' : 'rgba(59,130,246,0.6)';
+    chip.style.background  = group === 'case'
+      ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.08)';
+  }
+}
+
+// Auto-detect case/control from sample titles
+function autoAssignGroups() {
+  const samples = window._geoSamples || [];
+  const caseKw  = ['tumor','tumour','cancer','disease','case','patient',
+                   'treated','knockdown','ko','mut','infected'];
+  const ctrlKw  = ['normal','control','ctrl','healthy','untreated',
+                   'wild','wt','mock','scramble','adjacent','baseline'];
+
+  samples.forEach(s => {
+    const text = ((s.title||'') + ' ' +
+      Object.values(s.characteristics||{}).join(' ')).toLowerCase();
+    const sid = s.id || s.sample_id || '';
+    const isCase = caseKw.some(k => text.includes(k));
+    const isCtrl = ctrlKw.some(k => text.includes(k));
+    if (isCase && !isCtrl) assignSample(sid, 'case');
+    else if (isCtrl && !isCase) assignSample(sid, 'control');
+  });
+
+  const caseCount = (document.getElementById('geoCaseSamples')?.value||'')
+    .split('\n').filter(Boolean).length;
+  const ctrlCount = (document.getElementById('geoControlSamples')?.value||'')
+    .split('\n').filter(Boolean).length;
+  document.getElementById('geoStatus').textContent =
+    'Auto-detected: ' + caseCount + ' case, ' + ctrlCount + ' control samples. ' +
+    'Review and adjust if needed.';
+}
+
+// Clear all assignments
+function clearAssignments() {
+  const caseEl = document.getElementById('geoCaseSamples');
+  const ctrlEl = document.getElementById('geoControlSamples');
+  if (caseEl) caseEl.value = '';
+  if (ctrlEl) ctrlEl.value = '';
+  document.querySelectorAll('.sample-chip').forEach(c => {
+    c.style.borderColor = '';
+    c.style.background  = '';
+  });
+}
+
 function geneTable(rows){return `<table class="mini-table"><thead><tr><th>Gene</th><th>log2FC</th><th>padj</th><th>Evidence</th></tr></thead><tbody>${rows.map(g=>`<tr><td>${esc(g.symbol)}</td><td>${Number(g.log2fc||0).toFixed(2)}</td><td>${Number(g.padj||1).toExponential(2)}</td><td>${esc(g.confidence_tier||g.direction||'')}</td></tr>`).join('')}</tbody></table>`}
 function renderGeoResults(data) {
   const ai = data.ai_interpretation || {};
