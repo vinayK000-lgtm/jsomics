@@ -13,7 +13,7 @@ _started = time.time()
 
 @router.get("/health", tags=["system"])
 async def health(request: Request):
-    """Liveness probe — Railway pings this."""
+    """Liveness probe — Fly.io health check."""
     orchestrator = getattr(request.app.state, "orchestrator", None)
     return {
         "status": "ok",
